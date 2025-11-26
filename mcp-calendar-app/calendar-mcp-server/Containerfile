@@ -10,9 +10,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy server code
 COPY server.py .
+COPY server_sse.py .
 
-# Make server executable
-RUN chmod +x server.py
+# Make servers executable
+RUN chmod +x server.py server_sse.py
 
 # Create non-root user for security
 RUN useradd -r -s /bin/false mcp-user && \
@@ -24,5 +25,5 @@ USER mcp-user
 # Set environment variables
 ENV CALENDAR_API_BASE_URL="http://calendar-api:8000"
 
-# Run the MCP server
-CMD ["python", "server.py"]
+# Run the appropriate server based on transport mode
+CMD ["sh", "-c", "if [ \"$MCP_TRANSPORT\" = \"sse\" ]; then python server_sse.py; else python server.py; fi"]

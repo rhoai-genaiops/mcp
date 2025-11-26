@@ -1,7 +1,7 @@
 # Global settings
 global:
-  namespace: redwood-university
-  imageRegistry: ""
+  namespace: ai501
+  imageRegistry: "quay.io/"
   imagePullSecrets: []
 
 # University branding
@@ -75,8 +75,8 @@ calendarFrontend:
 calendarMcpServer:
   enabled: true
   image:
-    repository: rhoai-genaiops/calendar-mcp-server
-    tag: v1
+    repository: rlundber/mcp-calendar #rhoai-genaiops/calendar-mcp-server
+    tag: 0.1
     pullPolicy: IfNotPresent
   
   replicaCount: 1
@@ -91,7 +91,7 @@ calendarMcpServer:
       memory: "128Mi"
       cpu: "100m"
     limits:
-      memory: "256Mi"
+      memory: "1Gi"
       cpu: "200m"
   
   config:
@@ -105,5 +105,5 @@ affinity: {}
 # Security context
 securityContext:
   runAsNonRoot: true
-  runAsUser: 1000
-  fsGroup: 1000
+  # runAsUser and fsGroup are omitted to allow OpenShift to assign them automatically
+  # OpenShift will use UIDs/GIDs from the namespace's allowed range
