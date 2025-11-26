@@ -30,7 +30,7 @@ const Calendar = () => {
 
   // Function to fetch schedules from the backend
   const fetchSchedules = () => {
-    axios.get('http://127.0.0.1:8000/schedules')
+    axios.get('/api/schedules')
       .then((response) => {
         setSchedules(response.data);
       })
@@ -102,7 +102,7 @@ const Calendar = () => {
     console.log('Submitting schedule:', formattedSchedule);
 
     try {
-      const response = await axios.post('http://127.0.0.1:8000/schedules', formattedSchedule, {
+      const response = await axios.post('/api/schedules', formattedSchedule, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -174,7 +174,7 @@ const Calendar = () => {
     }
 
     try {
-      await axios.delete(`http://127.0.0.1:8000/schedules/${eventId}`, {
+      await axios.delete(`/api/schedules/${eventId}`, {
         headers: {
           'Content-Type': 'application/json',
         },

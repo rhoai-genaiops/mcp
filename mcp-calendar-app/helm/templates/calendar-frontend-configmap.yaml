@@ -8,7 +8,6 @@ metadata:
     {{- include "redwood-calendar.labels" . | nindent 4 }}
     app.kubernetes.io/component: frontend
 data:
-  REACT_APP_CALENDAR_API_URL: "http://{{ include "redwood-calendar.fullname" . }}-api:{{ .Values.calendarApi.service.port }}"
   REACT_APP_UNIVERSITY_NAME: {{ .Values.university.name | quote }}
   REACT_APP_SYSTEM_BRANDING: {{ .Values.university.systemBranding | quote }}
 {{- end }}

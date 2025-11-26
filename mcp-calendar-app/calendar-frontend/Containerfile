@@ -16,6 +16,7 @@ RUN npm run build
 
 # 2) Runtime stage: serve with nginx
 FROM nginx:stable-alpine
+# Include nginx.conf as default (will be overridden by ConfigMap in K8s)
 COPY src/nginx.conf /etc/nginx/nginx.conf
 COPY --from=builder /app/build /usr/share/nginx/html
 

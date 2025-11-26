@@ -71,11 +71,15 @@ calendarFrontend:
       memory: "256Mi"
       cpu: "200m"
 
+  # API backend URL for nginx proxy
+  # If empty, will auto-generate: http://<release-name>-canopy-mcp-calendar-api:<port>
+  apiUrl: ""
+
 # Calendar MCP Server configuration
 calendarMcpServer:
   enabled: true
   image:
-    repository: hoai-genaiops/calendar-mcp-server #rhoai-genaiops/calendar-mcp-server
+    repository: rhoai-genaiops/calendar-mcp-server
     tag: v2
     pullPolicy: IfNotPresent
   
