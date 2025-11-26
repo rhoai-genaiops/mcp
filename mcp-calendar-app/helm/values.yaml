@@ -75,8 +75,8 @@ calendarFrontend:
 calendarMcpServer:
   enabled: true
   image:
-    repository: rlundber/mcp-calendar #rhoai-genaiops/calendar-mcp-server
-    tag: 0.1
+    repository: hoai-genaiops/calendar-mcp-server #rhoai-genaiops/calendar-mcp-server
+    tag: v2
     pullPolicy: IfNotPresent
   
   replicaCount: 1
