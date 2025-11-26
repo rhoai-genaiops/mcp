@@ -1,43 +1,47 @@
 #!/usr/bin/env python3
 """
-Redwood Digital University Calendar MCP Server - Provides access to academic calendar through MCP tools.
+Redwood Digital University Calendar MCP Server using FastMCP.
+Supports both stdio (local) and SSE (remote) transports.
+
+Usage:
+  Local/stdio mode (default):  python server.py
+  Remote/SSE mode:             MCP_TRANSPORT=sse python server.py
 """
 
-import asyncio
-import json
 import logging
 import os
-from typing import Any, Sequence
+from typing import Literal, Optional
+from fastmcp import FastMCP
 import aiohttp
 from datetime import datetime, timedelta
 
-from mcp.server import Server, NotificationOptions
-from mcp.server.models import InitializationOptions
-import mcp.server.stdio
-import mcp.types as types
-
-# Configure logging to stderr (so it doesn't interfere with stdin/stdout JSON-RPC)
-import sys
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    stream=sys.stderr  # Log to stderr, not stdout
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger("calendar-mcp-server")
 
-# Create the server instance
-server = Server("calendar-mcp-server")
-
-# Calendar API configuration
+# Configuration
+MCP_TRANSPORT = os.getenv("MCP_TRANSPORT", "stdio")  # "stdio" or "sse"
+MCP_PORT = int(os.getenv("MCP_PORT", "8080"))
+MCP_HOST = os.getenv("MCP_HOST", "0.0.0.0")
 CALENDAR_API_BASE_URL = os.getenv("CALENDAR_API_BASE_URL", "http://127.0.0.1:8000")
+
+# Type definitions for enum validation
+CategoryType = Literal["Lecture", "Lab", "Meeting", "Office Hours", "Assignment",
+                       "Defense", "Workshop", "Study Group", "Seminar", "Grading", "Advising"]
+StatusType = Literal["not_started", "in_progress", "completed"]
+PeriodType = Literal["week", "month", "semester"]
+
+# Create FastMCP server
+mcp = FastMCP("calendar-mcp-server")
 
 async def make_calendar_api_request(method: str, endpoint: str, data: dict = None) -> dict:
     """Make a request to the Calendar API."""
     url = f"{CALENDAR_API_BASE_URL}{endpoint}"
-    headers = {
-        "Content-Type": "application/json"
-    }
-    
+    headers = {"Content-Type": "application/json"}
+
     try:
         async with aiohttp.ClientSession() as session:
             if method.upper() == "GET":
@@ -68,264 +72,60 @@ async def make_calendar_api_request(method: str, endpoint: str, data: dict = Non
         logger.error(f"Calendar API request failed: {e}")
         raise ValueError(f"Calendar API request failed: {str(e)}")
 
-@server.list_tools()
-async def handle_list_tools() -> list[types.Tool]:
-    """List available calendar tools."""
-    return [
-        types.Tool(
-            name="get_all_events",
-            description="Get all events/schedules from the Redwood Digital University calendar",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "category": {
-                        "type": "string",
-                        "enum": ["Lecture", "Lab", "Meeting", "Office Hours", "Assignment", "Defense", "Workshop", "Study Group", "Seminar", "Grading", "Advising"],
-                        "description": "Filter by event category (optional)"
-                    },
-                    "status": {
-                        "type": "string",
-                        "enum": ["not_started", "in_progress", "completed"],
-                        "description": "Filter by completion status (optional)"
-                    }
-                }
-            }
-        ),
-        types.Tool(
-            name="get_event",
-            description="Get detailed information about a specific event by ID",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "event_id": {
-                        "type": "string",
-                        "description": "Event ID to retrieve"
-                    }
-                },
-                "required": ["event_id"]
-            }
-        ),
-        types.Tool(
-            name="create_event",
-            description="Create a new academic event in the calendar",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "description": "Event name/title"
-                    },
-                    "content": {
-                        "type": "string",
-                        "description": "Event description/details"
-                    },
-                    "category": {
-                        "type": "string",
-                        "enum": ["Lecture", "Lab", "Meeting", "Office Hours", "Assignment", "Defense", "Workshop", "Study Group", "Seminar", "Grading", "Advising"],
-                        "description": "Event category"
-                    },
-                    "level": {
-                        "type": "integer",
-                        "enum": [1, 2, 3],
-                        "description": "Priority level (1=Low, 2=Medium, 3=High)"
-                    },
-                    "start_time": {
-                        "type": "string",
-                        "description": "Start time in YYYY-MM-DD HH:MM:SS format"
-                    },
-                    "end_time": {
-                        "type": "string",
-                        "description": "End time in YYYY-MM-DD HH:MM:SS format"
-                    }
-                },
-                "required": ["name", "category", "level", "start_time", "end_time"]
-            }
-        ),
-        types.Tool(
-            name="update_event",
-            description="Update an existing event in the calendar",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "event_id": {
-                        "type": "string",
-                        "description": "Event ID to update"
-                    },
-                    "name": {
-                        "type": "string",
-                        "description": "Event name/title"
-                    },
-                    "content": {
-                        "type": "string",
-                        "description": "Event description/details"
-                    },
-                    "category": {
-                        "type": "string",
-                        "enum": ["Lecture", "Lab", "Meeting", "Office Hours", "Assignment", "Defense", "Workshop", "Study Group", "Seminar", "Grading", "Advising"],
-                        "description": "Event category"
-                    },
-                    "level": {
-                        "type": "integer",
-                        "enum": [1, 2, 3],
-                        "description": "Priority level (1=Low, 2=Medium, 3=High)"
-                    },
-                    "status": {
-                        "type": "number",
-                        "minimum": 0.0,
-                        "maximum": 1.0,
-                        "description": "Completion status (0.0=Not Started, 0.5=In Progress, 1.0=Completed)"
-                    },
-                    "start_time": {
-                        "type": "string",
-                        "description": "Start time in YYYY-MM-DD HH:MM:SS format"
-                    },
-                    "end_time": {
-                        "type": "string",
-                        "description": "End time in YYYY-MM-DD HH:MM:SS format"
-                    }
-                },
-                "required": ["event_id"]
-            }
-        ),
-        types.Tool(
-            name="delete_event",
-            description="Delete an event from the calendar",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "event_id": {
-                        "type": "string",
-                        "description": "Event ID to delete"
-                    }
-                },
-                "required": ["event_id"]
-            }
-        ),
-        types.Tool(
-            name="get_upcoming_events",
-            description="Get upcoming events within a specified number of days",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "days": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 30,
-                        "description": "Number of days to look ahead (default: 7)"
-                    },
-                    "category": {
-                        "type": "string",
-                        "enum": ["Lecture", "Lab", "Meeting", "Office Hours", "Assignment", "Defense", "Workshop", "Study Group", "Seminar", "Grading", "Advising"],
-                        "description": "Filter by event category (optional)"
-                    }
-                }
-            }
-        ),
-        types.Tool(
-            name="get_events_by_date",
-            description="Get all events for a specific date",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "date": {
-                        "type": "string",
-                        "description": "Date in YYYY-MM-DD format"
-                    }
-                },
-                "required": ["date"]
-            }
-        ),
-        types.Tool(
-            name="search_events",
-            description="Search events by name or content",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "Search query to match against event names and descriptions"
-                    }
-                },
-                "required": ["query"]
-            }
-        ),
-        types.Tool(
-            name="get_calendar_statistics",
-            description="Get calendar statistics and overview",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "period": {
-                        "type": "string",
-                        "enum": ["week", "month", "semester"],
-                        "description": "Time period for statistics (default: month)"
-                    }
-                }
-            }
-        )
-    ]
+@mcp.tool()
+async def get_all_events(
+    category: Optional[CategoryType] = None,
+    status: Optional[StatusType] = None
+) -> str:
+    """Get all events/schedules from the Redwood Digital University calendar.
 
-@server.call_tool()
-async def handle_call_tool(
-    name: str, arguments: dict[str, Any] | None
-) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
-    """Handle calendar tool calls."""
-    
-    logger.info(f"🔧 Tool called: {name} with arguments: {arguments}")
-    
-    try:
-        if name == "get_all_events":
-            result = await make_calendar_api_request("GET", "/schedules")
-            
-            events = result if isinstance(result, list) else []
-            
-            # Apply filters if provided
-            if arguments:
-                if "category" in arguments:
-                    events = [e for e in events if e.get("category") == arguments["category"]]
-                if "status" in arguments:
-                    status_map = {"not_started": 0.0, "in_progress": 0.5, "completed": 1.0}
-                    target_status = status_map.get(arguments["status"])
-                    if target_status is not None:
-                        if target_status == 0.0:
-                            events = [e for e in events if e.get("status", 0) == 0.0]
-                        elif target_status == 0.5:
-                            events = [e for e in events if 0.0 < e.get("status", 0) < 1.0]
-                        else:  # completed
-                            events = [e for e in events if e.get("status", 0) == 1.0]
-            
-            summary = f"Found {len(events)} events in Redwood Digital University calendar"
-            
-            event_list = "\\n".join([
-                f"• {event['name']} ({event['category']})\\n"
-                f"  📅 {event['start_time']} - {event['end_time']}\\n"
-                f"  📋 {event.get('content', 'No description')}\\n"
-                f"  🎯 Priority: {['', 'Low', 'Medium', 'High'][event.get('level', 1)]}\\n"
-                f"  ✅ Status: {int(event.get('status', 0) * 100)}% complete\\n"
-                for event in events[:10]  # Limit to first 10 for readability
-            ])
-            
-            if len(events) > 10:
-                event_list += f"\\n... and {len(events) - 10} more events"
-            
-            return [
-                types.TextContent(
-                    type="text",
-                    text=f"{summary}\\n\\n{event_list}"
-                )
-            ]
-        
-        elif name == "get_event":
-            if not arguments or "event_id" not in arguments:
-                raise ValueError("Event ID is required")
-            
-            event_id = arguments["event_id"]
-            result = await make_calendar_api_request("GET", f"/schedules/{event_id}")
-            
-            # If result is a list (as the backend currently returns), take the first item
-            event = result[0] if isinstance(result, list) and result else result
-            
-            details = f"""📚 Redwood Digital University Event Details:
+    Args:
+        category: Filter by event category (optional)
+        status: Filter by completion status (optional)
+    """
+    result = await make_calendar_api_request("GET", "/schedules")
+    events = result if isinstance(result, list) else []
+
+    # Apply filters
+    if category:
+        events = [e for e in events if e.get("category") == category]
+    if status:
+        status_map = {"not_started": 0.0, "in_progress": 0.5, "completed": 1.0}
+        target_status = status_map.get(status)
+        if target_status is not None:
+            if target_status == 0.0:
+                events = [e for e in events if e.get("status", 0) == 0.0]
+            elif target_status == 0.5:
+                events = [e for e in events if 0.0 < e.get("status", 0) < 1.0]
+            else:
+                events = [e for e in events if e.get("status", 0) == 1.0]
+
+    summary = f"Found {len(events)} events in Redwood Digital University calendar\n\n"
+    event_list = "\n".join([
+        f"• {event['name']} ({event['category']})\n"
+        f"  📅 {event['start_time']} - {event['end_time']}\n"
+        f"  📋 {event.get('content', 'No description')}\n"
+        f"  🎯 Priority: {['', 'Low', 'Medium', 'High'][event.get('level', 1)]}\n"
+        f"  ✅ Status: {int(event.get('status', 0) * 100)}% complete\n"
+        for event in events[:10]
+    ])
+
+    if len(events) > 10:
+        event_list += f"\n... and {len(events) - 10} more events"
+
+    return summary + event_list
+
+@mcp.tool()
+async def get_event(event_id: str) -> str:
+    """Get detailed information about a specific event by ID.
+
+    Args:
+        event_id: Event ID to retrieve
+    """
+    result = await make_calendar_api_request("GET", f"/schedules/{event_id}")
+    event = result[0] if isinstance(result, list) and result else result
+
+    return f"""📚 Redwood Digital University Event Details:
 
 🎓 **{event['name']}**
 📋 **Category:** {event['category']}
@@ -339,217 +139,215 @@ async def handle_call_tool(
 ✅ **Status:** {int(event.get('status', 0) * 100)}% complete
 🆔 **Event ID:** {event['sid']}
 🕐 **Created:** {event.get('creation_time', 'Unknown')}"""
-            
-            return [
-                types.TextContent(
-                    type="text",
-                    text=details
-                )
-            ]
-        
-        elif name == "create_event":
-            if not arguments:
-                raise ValueError("Event details are required")
-            
-            required_fields = ["name", "category", "level", "start_time", "end_time"]
-            for field in required_fields:
-                if field not in arguments:
-                    raise ValueError(f"{field} is required")
-            
-            # Generate unique SID
-            timestamp = int(datetime.now().timestamp() * 1000)
-            sid = f"mcp-event-{timestamp}"
-            
-            # Prepare event data
-            event_data = {
-                "sid": sid,
-                "name": arguments["name"],
-                "content": arguments.get("content", ""),
-                "category": arguments["category"],
-                "level": arguments["level"],
-                "status": 0.0,  # New events start as not started
-                "creation_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "start_time": arguments["start_time"],
-                "end_time": arguments["end_time"]
-            }
-            
-            result = await make_calendar_api_request("POST", "/schedules", event_data)
-            
-            return [
-                types.TextContent(
-                    type="text",
-                    text=f"✅ Event created successfully!\\n\\n🎓 **{result['name']}**\\n📋 Category: {result['category']}\\n📅 Time: {result['start_time']} - {result['end_time']}\\n🆔 Event ID: {result['sid']}"
-                )
-            ]
-        
-        elif name == "update_event":
-            if not arguments or "event_id" not in arguments:
-                raise ValueError("Event ID is required")
-            
-            event_id = arguments["event_id"]
-            
-            # Get current event data first
-            current_event = await make_calendar_api_request("GET", f"/schedules/{event_id}")
-            if isinstance(current_event, list) and current_event:
-                current_event = current_event[0]
-            
-            # Prepare update data (merge with current data)
-            update_data = {
-                "sid": event_id,
-                "name": arguments.get("name", current_event["name"]),
-                "content": arguments.get("content", current_event.get("content", "")),
-                "category": arguments.get("category", current_event["category"]),
-                "level": arguments.get("level", current_event["level"]),
-                "status": arguments.get("status", current_event.get("status", 0.0)),
-                "creation_time": current_event.get("creation_time"),
-                "start_time": arguments.get("start_time", current_event["start_time"]),
-                "end_time": arguments.get("end_time", current_event["end_time"])
-            }
-            
-            result = await make_calendar_api_request("PUT", f"/schedules/{event_id}", update_data)
-            
-            return [
-                types.TextContent(
-                    type="text",
-                    text=f"✅ Event updated successfully!\\n\\n🎓 **{result['name']}**\\n📋 Category: {result['category']}\\n✅ Status: {int(result.get('status', 0) * 100)}% complete"
-                )
-            ]
-        
-        elif name == "delete_event":
-            if not arguments or "event_id" not in arguments:
-                raise ValueError("Event ID is required")
-            
-            event_id = arguments["event_id"]
-            result = await make_calendar_api_request("DELETE", f"/schedules/{event_id}")
-            
-            return [
-                types.TextContent(
-                    type="text",
-                    text=f"🗑️ Event deleted successfully: {event_id}"
-                )
-            ]
-        
-        elif name == "get_upcoming_events":
-            days = arguments.get("days", 7) if arguments else 7
-            category_filter = arguments.get("category") if arguments else None
-            
-            # Get all events and filter for upcoming ones
-            all_events = await make_calendar_api_request("GET", "/schedules")
-            
-            now = datetime.now()
-            future_date = now + timedelta(days=days)
-            
-            upcoming_events = []
-            for event in all_events:
-                try:
-                    event_start = datetime.strptime(event["start_time"], "%Y-%m-%d %H:%M:%S")
-                    if now <= event_start <= future_date:
-                        if not category_filter or event.get("category") == category_filter:
-                            upcoming_events.append(event)
-                except:
-                    continue  # Skip events with invalid dates
-            
-            # Sort by start time
-            upcoming_events.sort(key=lambda x: x["start_time"])
-            
-            summary = f"📅 Upcoming events in next {days} day{'s' if days != 1 else ''}"
-            if category_filter:
-                summary += f" (filtered by {category_filter})"
-            summary += f": {len(upcoming_events)} found"
-            
-            event_list = "\\n".join([
-                f"• {event['name']} ({event['category']})\\n  📅 {event['start_time']}"
-                for event in upcoming_events[:10]
-            ])
-            
-            return [
-                types.TextContent(
-                    type="text",
-                    text=f"{summary}\\n\\n{event_list}"
-                )
-            ]
-        
-        elif name == "get_events_by_date":
-            if not arguments or "date" not in arguments:
-                raise ValueError("Date is required (YYYY-MM-DD format)")
-            
-            target_date = arguments["date"]
-            all_events = await make_calendar_api_request("GET", "/schedules")
-            
-            date_events = []
-            for event in all_events:
-                try:
-                    event_date = event["start_time"].split()[0]  # Extract date part
-                    if event_date == target_date:
-                        date_events.append(event)
-                except:
-                    continue
-            
-            summary = f"📅 Events on {target_date}: {len(date_events)} found"
-            
-            event_list = "\\n".join([
-                f"• {event['name']} ({event['category']})\\n  🕐 {event['start_time'].split()[1]} - {event['end_time'].split()[1]}"
-                for event in date_events
-            ])
-            
-            return [
-                types.TextContent(
-                    type="text",
-                    text=f"{summary}\\n\\n{event_list if event_list else 'No events scheduled for this date.'}"
-                )
-            ]
-        
-        elif name == "search_events":
-            if not arguments or "query" not in arguments:
-                raise ValueError("Search query is required")
-            
-            query = arguments["query"].lower()
-            all_events = await make_calendar_api_request("GET", "/schedules")
-            
-            matching_events = []
-            for event in all_events:
-                if (query in event["name"].lower() or 
-                    query in event.get("content", "").lower()):
-                    matching_events.append(event)
-            
-            summary = f"🔍 Search results for '{arguments['query']}': {len(matching_events)} events found"
-            
-            event_list = "\\n".join([
-                f"• {event['name']} ({event['category']})\\n  📅 {event['start_time']}"
-                for event in matching_events[:10]
-            ])
-            
-            return [
-                types.TextContent(
-                    type="text",
-                    text=f"{summary}\\n\\n{event_list if event_list else 'No events match your search query.'}"
-                )
-            ]
-        
-        elif name == "get_calendar_statistics":
-            period = arguments.get("period", "month") if arguments else "month"
-            all_events = await make_calendar_api_request("GET", "/schedules")
-            
-            # Calculate statistics
-            total_events = len(all_events)
-            completed_events = len([e for e in all_events if e.get("status", 0) == 1.0])
-            in_progress_events = len([e for e in all_events if 0 < e.get("status", 0) < 1.0])
-            pending_events = len([e for e in all_events if e.get("status", 0) == 0.0])
-            
-            # Category breakdown
-            categories = {}
-            for event in all_events:
-                cat = event.get("category", "Unknown")
-                categories[cat] = categories.get(cat, 0) + 1
-            
-            category_breakdown = "\\n".join([
-                f"• {cat}: {count} events" 
-                for cat, count in sorted(categories.items())
-            ])
-            
-            completion_rate = (completed_events / total_events * 100) if total_events > 0 else 0
-            
-            stats = f"""📊 Redwood Digital University Calendar Statistics ({period})
+
+@mcp.tool()
+async def create_event(
+    name: str,
+    category: CategoryType,
+    level: Literal[1, 2, 3],
+    start_time: str,
+    end_time: str,
+    content: str = ""
+) -> str:
+    """Create a new academic event in the calendar.
+
+    Args:
+        name: Event name/title
+        category: Event category
+        level: Priority level (1=Low, 2=Medium, 3=High)
+        start_time: Start time in YYYY-MM-DD HH:MM:SS format
+        end_time: End time in YYYY-MM-DD HH:MM:SS format
+        content: Event description/details (optional)
+    """
+    timestamp = int(datetime.now().timestamp() * 1000)
+    sid = f"mcp-event-{timestamp}"
+
+    event_data = {
+        "sid": sid,
+        "name": name,
+        "content": content,
+        "category": category,
+        "level": level,
+        "status": 0.0,
+        "creation_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "start_time": start_time,
+        "end_time": end_time
+    }
+
+    result = await make_calendar_api_request("POST", "/schedules", event_data)
+    return f"✅ Event created successfully!\n\n🎓 **{result['name']}**\n📋 Category: {result['category']}\n📅 Time: {result['start_time']} - {result['end_time']}\n🆔 Event ID: {result['sid']}"
+
+@mcp.tool()
+async def update_event(
+    event_id: str,
+    name: Optional[str] = None,
+    content: Optional[str] = None,
+    category: Optional[CategoryType] = None,
+    level: Optional[Literal[1, 2, 3]] = None,
+    status: Optional[float] = None,
+    start_time: Optional[str] = None,
+    end_time: Optional[str] = None
+) -> str:
+    """Update an existing event in the calendar.
+
+    Args:
+        event_id: Event ID to update
+        name: Event name/title (optional)
+        content: Event description/details (optional)
+        category: Event category (optional)
+        level: Priority level 1-3 (optional)
+        status: Completion status 0.0-1.0 (optional)
+        start_time: Start time in YYYY-MM-DD HH:MM:SS format (optional)
+        end_time: End time in YYYY-MM-DD HH:MM:SS format (optional)
+    """
+    # Get current event data first
+    current_event = await make_calendar_api_request("GET", f"/schedules/{event_id}")
+    if isinstance(current_event, list) and current_event:
+        current_event = current_event[0]
+
+    # Prepare update data (merge with current data)
+    update_data = {
+        "sid": event_id,
+        "name": name if name is not None else current_event["name"],
+        "content": content if content is not None else current_event.get("content", ""),
+        "category": category if category is not None else current_event["category"],
+        "level": level if level is not None else current_event["level"],
+        "status": status if status is not None else current_event.get("status", 0.0),
+        "creation_time": current_event.get("creation_time"),
+        "start_time": start_time if start_time is not None else current_event["start_time"],
+        "end_time": end_time if end_time is not None else current_event["end_time"]
+    }
+
+    result = await make_calendar_api_request("PUT", f"/schedules/{event_id}", update_data)
+    return f"✅ Event updated successfully!\n\n🎓 **{result['name']}**\n📋 Category: {result['category']}\n✅ Status: {int(result.get('status', 0) * 100)}% complete"
+
+@mcp.tool()
+async def delete_event(event_id: str) -> str:
+    """Delete an event from the calendar.
+
+    Args:
+        event_id: Event ID to delete
+    """
+    await make_calendar_api_request("DELETE", f"/schedules/{event_id}")
+    return f"🗑️ Event deleted successfully: {event_id}"
+
+@mcp.tool()
+async def search_events(query: str) -> str:
+    """Search events by name or content.
+
+    Args:
+        query: Search query to match against event names and descriptions
+    """
+    all_events = await make_calendar_api_request("GET", "/schedules")
+
+    matching_events = []
+    for event in all_events:
+        if (query.lower() in event["name"].lower() or
+            query.lower() in event.get("content", "").lower()):
+            matching_events.append(event)
+
+    summary = f"🔍 Search results for '{query}': {len(matching_events)} events found\n\n"
+    event_list = "\n".join([
+        f"• {event['name']} ({event['category']})\n  📅 {event['start_time']}"
+        for event in matching_events[:10]
+    ])
+
+    return summary + (event_list if event_list else "No events match your search query.")
+
+@mcp.tool()
+async def get_upcoming_events(
+    days: int = 7,
+    category: Optional[CategoryType] = None
+) -> str:
+    """Get upcoming events within a specified number of days.
+
+    Args:
+        days: Number of days to look ahead (1-30, default: 7)
+        category: Filter by event category (optional)
+    """
+    all_events = await make_calendar_api_request("GET", "/schedules")
+
+    now = datetime.now()
+    future_date = now + timedelta(days=days)
+
+    upcoming_events = []
+    for event in all_events:
+        try:
+            event_start = datetime.strptime(event["start_time"], "%Y-%m-%d %H:%M:%S")
+            if now <= event_start <= future_date:
+                if not category or event.get("category") == category:
+                    upcoming_events.append(event)
+        except:
+            continue
+
+    upcoming_events.sort(key=lambda x: x["start_time"])
+
+    summary = f"📅 Upcoming events in next {days} day{'s' if days != 1 else ''}"
+    if category:
+        summary += f" (filtered by {category})"
+    summary += f": {len(upcoming_events)} found\n\n"
+
+    event_list = "\n".join([
+        f"• {event['name']} ({event['category']})\n  📅 {event['start_time']}"
+        for event in upcoming_events[:10]
+    ])
+
+    return summary + event_list
+
+@mcp.tool()
+async def get_events_by_date(date: str) -> str:
+    """Get all events for a specific date.
+
+    Args:
+        date: Date in YYYY-MM-DD format
+    """
+    all_events = await make_calendar_api_request("GET", "/schedules")
+
+    date_events = []
+    for event in all_events:
+        try:
+            event_date = event["start_time"].split()[0]  # Extract date part
+            if event_date == date:
+                date_events.append(event)
+        except:
+            continue
+
+    summary = f"📅 Events on {date}: {len(date_events)} found\n\n"
+
+    event_list = "\n".join([
+        f"• {event['name']} ({event['category']})\n  🕐 {event['start_time'].split()[1]} - {event['end_time'].split()[1]}"
+        for event in date_events
+    ])
+
+    return summary + (event_list if event_list else "No events scheduled for this date.")
+
+@mcp.tool()
+async def get_calendar_statistics(period: PeriodType = "month") -> str:
+    """Get calendar statistics and overview.
+
+    Args:
+        period: Time period for statistics
+    """
+    all_events = await make_calendar_api_request("GET", "/schedules")
+
+    total_events = len(all_events)
+    completed_events = len([e for e in all_events if e.get("status", 0) == 1.0])
+    in_progress_events = len([e for e in all_events if 0 < e.get("status", 0) < 1.0])
+    pending_events = len([e for e in all_events if e.get("status", 0) == 0.0])
+
+    categories = {}
+    for event in all_events:
+        cat = event.get("category", "Unknown")
+        categories[cat] = categories.get(cat, 0) + 1
+
+    category_breakdown = "\n".join([
+        f"• {cat}: {count} events"
+        for cat, count in sorted(categories.items())
+    ])
+
+    completion_rate = (completed_events / total_events * 100) if total_events > 0 else 0
+
+    return f"""📊 Redwood Digital University Calendar Statistics ({period})
 
 📈 **Overview:**
 • Total Events: {total_events}
@@ -561,54 +359,15 @@ async def handle_call_tool(
 {category_breakdown}
 
 🎯 **Academic Activity Level:** {'High' if total_events > 50 else 'Medium' if total_events > 20 else 'Low'}"""
-            
-            return [
-                types.TextContent(
-                    type="text",
-                    text=stats
-                )
-            ]
-        
-        else:
-            raise ValueError(f"Unknown tool: {name}")
-    
-    except Exception as e:
-        logger.error(f"Tool execution failed: {e}")
-        return [
-            types.TextContent(
-                type="text",
-                text=f"❌ Error: {str(e)}"
-            )
-        ]
-
-async def main():
-    logger.info("🎓 Starting Redwood Digital University Calendar MCP Server")
-    logger.info(f"📡 Calendar API URL: {CALENDAR_API_BASE_URL}")
-    
-    # Test API connection
-    try:
-        test_result = await make_calendar_api_request("GET", "/")
-        logger.info(f"✅ Calendar API connection successful: {test_result}")
-    except Exception as e:
-        logger.error(f"❌ Calendar API connection failed: {e}")
-        logger.error("🔧 Make sure the calendar API is running on the configured URL")
-    
-    logger.info("🔄 MCP Server ready - waiting for JSON-RPC connections...")
-    
-    # Run the server using stdio
-    async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
-        await server.run(
-            read_stream,
-            write_stream,
-            InitializationOptions(
-                server_name="calendar-mcp-server",
-                server_version="1.0.0",
-                capabilities=server.get_capabilities(
-                    notification_options=NotificationOptions(),
-                    experimental_capabilities={},
-                ),
-            ),
-        )
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    logger.info("🎓 Starting Redwood Digital University Calendar MCP Server")
+    logger.info(f"📡 Calendar API URL: {CALENDAR_API_BASE_URL}")
+    logger.info(f"🚀 Transport mode: {MCP_TRANSPORT}")
+
+    if MCP_TRANSPORT.lower() == "sse":
+        logger.info(f"🔄 Starting SSE server on {MCP_HOST}:{MCP_PORT}...")
+        mcp.run(transport="sse", host=MCP_HOST, port=MCP_PORT)
+    else:
+        logger.info("🔄 Starting stdio server...")
+        mcp.run(transport="stdio")

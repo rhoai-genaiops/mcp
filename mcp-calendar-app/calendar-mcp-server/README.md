@@ -13,9 +13,9 @@ The Calendar MCP server (`server.py`) provides comprehensive academic calendar f
 
 ## Transport Modes
 
-The MCP server supports **two transport modes** with separate entry points:
+The MCP server uses **FastMCP** and supports both transport modes with a single codebase:
 
-### 1. **Local Mode (stdio)** - `server.py`
+### 1. **Local Mode (stdio)** - Default
 Best for local development with AI clients like Claude Desktop.
 - Uses stdin/stdout for JSON-RPC communication
 - No network ports required
@@ -24,26 +24,26 @@ Best for local development with AI clients like Claude Desktop.
 **Usage:**
 ```bash
 python server.py
+# Or explicitly:
+MCP_TRANSPORT=stdio python server.py
 ```
 
-### 2. **Remote Mode (HTTP/SSE)** - `server_sse.py`
+### 2. **Remote Mode (HTTP/SSE)**
 Best for deployment as a remote service in Kubernetes/OpenShift.
-- HTTP wrapper around the stdio MCP server
 - Uses Server-Sent Events (SSE) for streaming
 - Accessible over the network
 - Suitable for production deployments
 
 **Usage:**
 ```bash
-python server_sse.py
-# Or with custom configuration:
-MCP_PORT=8080 MCP_HOST=0.0.0.0 CALENDAR_API_BASE_URL=http://api:8000 python server_sse.py
+MCP_TRANSPORT=sse python server.py
+# With custom configuration:
+MCP_TRANSPORT=sse MCP_PORT=8080 MCP_HOST=0.0.0.0 python server.py
 ```
 
-**Endpoints:**
-- SSE connection: `http://your-host:8080/sse`
-- JSON-RPC messages: `POST http://your-host:8080/messages`
-- Health check: `http://your-host:8080/health`
+**SSE Endpoint:**
+- Connect to: `http://your-host:8080/sse`
+- FastMCP handles all MCP protocol details automatically
 
 ## Key Features
 
@@ -98,20 +98,20 @@ The MCP server now shows helpful logs:
 
 ## Available Tools
 
-The Calendar MCP server provides the following tools for AI agents:
+The Calendar MCP server provides **9 tools** for AI agents:
 
 ### Core Calendar Operations
 1. **get_all_events** - Get all events with optional filtering by category or status
 2. **get_event** - Get detailed information about a specific event by ID
 3. **create_event** - Create a new academic event in the calendar
-4. **update_event** - Update an existing event (including status changes)
+4. **update_event** - Update an existing event (name, content, status, times, etc.)
 5. **delete_event** - Remove an event from the calendar
 
 ### Advanced Queries
-6. **get_upcoming_events** - Get upcoming events within specified days
-7. **get_events_by_date** - Get all events for a specific date
+6. **get_upcoming_events** - Get upcoming events within specified days (1-30)
+7. **get_events_by_date** - Get all events for a specific date (YYYY-MM-DD)
 8. **search_events** - Search events by name or content
-9. **get_calendar_statistics** - Get calendar overview and statistics
+9. **get_calendar_statistics** - Get calendar overview and statistics by period
 
 ### Academic Event Categories
 - **Lecture** - Class lectures and presentations
@@ -194,12 +194,15 @@ python server.py
 
 **Docker/Container Configuration:**
 ```bash
+# Local mode (stdio)
+docker run -e CALENDAR_API_BASE_URL="http://calendar-api:8000" \
+           calendar-mcp-server:latest
+
 # Remote mode (SSE) - for Kubernetes deployment
 docker run -e CALENDAR_API_BASE_URL="http://calendar-api:8000" \
            -e MCP_TRANSPORT=sse \
            -p 8080:8080 \
            calendar-mcp-server:latest
 
-# The container automatically runs server_sse.py when MCP_TRANSPORT=sse
-# and server.py for stdio mode (MCP_TRANSPORT=stdio or unset)
+# The same server.py handles both transports based on MCP_TRANSPORT env var
 ```
