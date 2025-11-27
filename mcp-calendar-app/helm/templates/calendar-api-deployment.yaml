@@ -35,6 +35,10 @@ spec:
         env:
         - name: DATABASE_PATH
           value: "/app/data/CalendarDB.db"
+        - name: SQLITE_TMPDIR
+          value: "/tmp"
+        - name: TMPDIR
+          value: "/tmp"
         - name: UNIVERSITY_NAME
           value: {{ .Values.university.name | quote }}
         - name: SYSTEM_BRANDING
@@ -56,6 +60,8 @@ spec:
         volumeMounts:
         - name: calendar-data
           mountPath: /app/data
+        - name: tmp
+          mountPath: /tmp
         securityContext:
           runAsNonRoot: true
           allowPrivilegeEscalation: false
@@ -67,6 +73,8 @@ spec:
       - name: calendar-data
         persistentVolumeClaim:
           claimName: {{ include "redwood-calendar.fullname" . }}-api-pvc
+      - name: tmp
+        emptyDir: {}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
