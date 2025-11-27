@@ -1,9 +1,22 @@
 import sqlite3
+import os
 
 class DatabaseHandler:
     def __init__(self, db_name: str, check_same_thread: bool = True):
         self.db_name = db_name
-        self.conn = sqlite3.connect(f'{db_name}.db', check_same_thread=check_same_thread)
+        # If db_name is already a full path (contains /), use it as-is
+        # Otherwise, append .db extension
+        if '/' in db_name or db_name.endswith('.db'):
+            db_path = db_name
+        else:
+            db_path = f'{db_name}.db'
+
+        # Ensure the directory exists
+        db_dir = os.path.dirname(db_path)
+        if db_dir and not os.path.exists(db_dir):
+            os.makedirs(db_dir, exist_ok=True)
+
+        self.conn = sqlite3.connect(db_path, check_same_thread=check_same_thread)
         self.c = self.conn.cursor()
 
     def execute(self, cmd: str, params=()):

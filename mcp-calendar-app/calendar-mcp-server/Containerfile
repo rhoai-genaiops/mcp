@@ -24,5 +24,5 @@ USER mcp-user
 # Set environment variables
 ENV CALENDAR_API_BASE_URL="http://calendar-api:8000"
 
-# Run the MCP server
+# Run the MCP server (automatically selects transport based on MCP_TRANSPORT env var)
 CMD ["python", "server.py"]

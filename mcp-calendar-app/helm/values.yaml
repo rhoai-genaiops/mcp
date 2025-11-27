@@ -1,7 +1,7 @@
 # Global settings
 global:
-  namespace: redwood-university
-  imageRegistry: ""
+  namespace: ai501
+  imageRegistry: "quay.io/"
   imagePullSecrets: []
 
 # University branding
@@ -14,7 +14,7 @@ calendarApi:
   enabled: true
   image:
     repository: rhoai-genaiops/calendar-api
-    tag: v1
+    tag: v2
     pullPolicy: IfNotPresent
   
   replicaCount: 1
@@ -71,12 +71,16 @@ calendarFrontend:
       memory: "256Mi"
       cpu: "200m"
 
+  # API backend URL for nginx proxy
+  # If empty, will auto-generate: http://<release-name>-canopy-mcp-calendar-api:<port>
+  apiUrl: ""
+
 # Calendar MCP Server configuration
 calendarMcpServer:
   enabled: true
   image:
     repository: rhoai-genaiops/calendar-mcp-server
-    tag: v1
+    tag: v2
     pullPolicy: IfNotPresent
   
   replicaCount: 1
@@ -91,7 +95,7 @@ calendarMcpServer:
       memory: "128Mi"
       cpu: "100m"
     limits:
-      memory: "256Mi"
+      memory: "1Gi"
       cpu: "200m"
   
   config:
@@ -105,5 +109,5 @@ affinity: {}
 # Security context
 securityContext:
   runAsNonRoot: true
-  runAsUser: 1000
-  fsGroup: 1000
+  # runAsUser and fsGroup are omitted to allow OpenShift to assign them automatically
+  # OpenShift will use UIDs/GIDs from the namespace's allowed range

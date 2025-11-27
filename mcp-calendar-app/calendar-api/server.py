@@ -3,6 +3,8 @@ from pydantic import BaseModel
 import configparser
 import database_handler
 import method
+import os
+import json
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -11,7 +13,20 @@ config = configparser.ConfigParser()
 config.read('db.conf')
 info = config['DEFAULT']
 
-dbh = database_handler.DatabaseHandler(db_name=info['db_name'], check_same_thread=False)
+# Use DATABASE_PATH environment variable if available, otherwise use db.conf
+db_path = os.getenv('DATABASE_PATH')
+if db_path:
+    # Remove .db extension if present in the path, as DatabaseHandler will handle it
+    db_name = db_path.replace('.db', '')
+else:
+    db_name = info['db_name']
+
+dbh = database_handler.DatabaseHandler(db_name=db_name, check_same_thread=False)
+
+# Ensure the table exists on startup
+columns = json.loads(info['columns'])
+dbh.create_table(table_name=info['table_name'], columns=columns)
+
 m = method.Method(conf_file='db.conf')
 
 # Add CORS middleware

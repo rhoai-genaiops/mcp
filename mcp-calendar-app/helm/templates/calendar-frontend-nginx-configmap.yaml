@@ -1,0 +1,63 @@
+{{- if .Values.calendarFrontend.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "redwood-calendar.fullname" . }}-frontend-nginx
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "redwood-calendar.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+data:
+  nginx.conf: |
+    # Nginx configuration for non-root user
+    worker_processes auto;
+    error_log /dev/stderr warn;
+    pid /tmp/nginx.pid;
+
+    events {
+        worker_connections 1024;
+    }
+
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+
+        # Temp paths accessible by non-root user
+        client_body_temp_path /tmp/nginx_client_temp;
+        proxy_temp_path /tmp/nginx_proxy_temp;
+        fastcgi_temp_path /tmp/nginx_fastcgi_temp;
+        uwsgi_temp_path /tmp/nginx_uwsgi_temp;
+        scgi_temp_path /tmp/nginx_scgi_temp;
+
+        sendfile on;
+        keepalive_timeout 65;
+
+        server {
+            listen 8080;
+            server_name localhost;
+            root /usr/share/nginx/html;
+            index index.html;
+
+            # Proxy API requests to backend service
+            location /api/ {
+                # Remove /api prefix and proxy to backend
+                rewrite ^/api/(.*)$ /$1 break;
+                # API URL from values.yaml, or auto-generated if not set
+                {{- if .Values.calendarFrontend.apiUrl }}
+                proxy_pass {{ .Values.calendarFrontend.apiUrl }};
+                {{- else }}
+                proxy_pass http://{{ include "redwood-calendar.fullname" . }}-api:{{ .Values.calendarApi.service.port }};
+                {{- end }}
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+
+            # React Router support
+            location / {
+                try_files $uri $uri/ /index.html;
+            }
+        }
+    }
+{{- end }}

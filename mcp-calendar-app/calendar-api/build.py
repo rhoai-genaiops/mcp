@@ -9,16 +9,30 @@ def load_config(file_path):
     config.read(file_path)
     return config['DEFAULT']
 
+def get_db_path():
+    """Get database path from environment variable or config"""
+    db_path = os.getenv('DATABASE_PATH')
+    if db_path:
+        # Remove .db extension if present in the path
+        return db_path.replace('.db', '')
+    else:
+        info = load_config('db.conf')
+        return info['db_name']
+
 def build_db():
     info = load_config('db.conf')
-    db_name = info.get('db_name')
+    db_name = get_db_path()
     table_name = info.get('table_name')
     columns = json.loads(info.get('columns', '{}'))
 
-    if not db_name or not table_name or not columns:
+    if not table_name or not columns:
         raise ValueError("Database configuration is incomplete.")
 
-    db_path = f"{db_name}.db"
+    # Construct the full path
+    if '/' in db_name or db_name.endswith('.db'):
+        db_path = db_name if db_name.endswith('.db') else f"{db_name}.db"
+    else:
+        db_path = f"{db_name}.db"
 
     # Check if the database file already exists
     if os.path.exists(db_path):

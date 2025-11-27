@@ -9,10 +9,10 @@ keywords:
   - university
   - mcp
   - ai
-home: https://github.com/rhoai-genaiops/canopy-mcp
+home: https://github.com/rhoai-genaiops/mcp
 sources:
-  - https://github.com/rhoai-genaiops/canopy-mcp
+  - https://github.com/rhoai-genaiops/mcp
 maintainers:
   - name: ckavili
-  - name: RHrolun
+  - name: RHRolun
   - name: rcarrata

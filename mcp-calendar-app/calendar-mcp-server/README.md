@@ -1,6 +1,6 @@
 # Redwood Digital University Calendar MCP Server
 
-This directory contains a custom Model Context Protocol (MCP) server that integrates with the Redwood Digital University academic calendar system, 
+This directory contains a custom Model Context Protocol (MCP) server that integrates with the Redwood Digital University academic calendar system,
 providing AI agents with comprehensive access to university scheduling, events, and academic activities.
 
 ## Overview
@@ -10,6 +10,40 @@ The Calendar MCP server (`server.py`) provides comprehensive academic calendar f
 - **Schedule Queries**: Search and filter events by various criteria
 - **Academic Planning**: View upcoming events and calendar statistics
 - **University Integration**: Seamless integration with Redwood Digital University systems
+
+## Transport Modes
+
+The MCP server uses **FastMCP** and supports both transport modes with a single codebase:
+
+### 1. **Local Mode (stdio)** - Default
+Best for local development with AI clients like Claude Desktop.
+- Uses stdin/stdout for JSON-RPC communication
+- No network ports required
+- Direct process-to-process communication
+
+**Usage:**
+```bash
+python server.py
+# Or explicitly:
+MCP_TRANSPORT=stdio python server.py
+```
+
+### 2. **Remote Mode (HTTP/SSE)**
+Best for deployment as a remote service in Kubernetes/OpenShift.
+- Uses Server-Sent Events (SSE) for streaming
+- Accessible over the network
+- Suitable for production deployments
+
+**Usage:**
+```bash
+MCP_TRANSPORT=sse python server.py
+# With custom configuration:
+MCP_TRANSPORT=sse MCP_PORT=8080 MCP_HOST=0.0.0.0 python server.py
+```
+
+**SSE Endpoint:**
+- Connect to: `http://your-host:8080/sse`
+- FastMCP handles all MCP protocol details automatically
 
 ## Key Features
 
@@ -64,20 +98,20 @@ The MCP server now shows helpful logs:
 
 ## Available Tools
 
-The Calendar MCP server provides the following tools for AI agents:
+The Calendar MCP server provides **9 tools** for AI agents:
 
 ### Core Calendar Operations
 1. **get_all_events** - Get all events with optional filtering by category or status
 2. **get_event** - Get detailed information about a specific event by ID
 3. **create_event** - Create a new academic event in the calendar
-4. **update_event** - Update an existing event (including status changes)
+4. **update_event** - Update an existing event (name, content, status, times, etc.)
 5. **delete_event** - Remove an event from the calendar
 
 ### Advanced Queries
-6. **get_upcoming_events** - Get upcoming events within specified days
-7. **get_events_by_date** - Get all events for a specific date
+6. **get_upcoming_events** - Get upcoming events within specified days (1-30)
+7. **get_events_by_date** - Get all events for a specific date (YYYY-MM-DD)
 8. **search_events** - Search events by name or content
-9. **get_calendar_statistics** - Get calendar overview and statistics
+9. **get_calendar_statistics** - Get calendar overview and statistics by period
 
 ### Academic Event Categories
 - **Lecture** - Class lectures and presentations
@@ -134,10 +168,41 @@ curl -X POST "http://127.0.0.1:8000/schedules" \\
 
 The Calendar MCP server uses the following environment variables:
 
+### Core Configuration
 - `CALENDAR_API_BASE_URL` - Base URL for the Calendar API (default: "http://127.0.0.1:8000")
 
-### Docker/Container Configuration
+### Transport Configuration
+- `MCP_TRANSPORT` - Transport mode: `stdio` (default) or `sse`
+- `MCP_PORT` - Port for SSE mode (default: 8080)
+- `MCP_HOST` - Host binding for SSE mode (default: "0.0.0.0")
+
+### Examples
+
+**Local development with Claude Desktop:**
 ```bash
-# Run with custom API URL
-docker run -e CALENDAR_API_BASE_URL="http://calendar-api:8000" calendar-mcp-server:latest
+export CALENDAR_API_BASE_URL="http://127.0.0.1:8000"
+python server.py
+```
+
+**Remote deployment in Kubernetes:**
+```bash
+export CALENDAR_API_BASE_URL="http://calendar-api:8000"
+export MCP_TRANSPORT=sse
+export MCP_PORT=8080
+python server.py
+```
+
+**Docker/Container Configuration:**
+```bash
+# Local mode (stdio)
+docker run -e CALENDAR_API_BASE_URL="http://calendar-api:8000" \
+           calendar-mcp-server:latest
+
+# Remote mode (SSE) - for Kubernetes deployment
+docker run -e CALENDAR_API_BASE_URL="http://calendar-api:8000" \
+           -e MCP_TRANSPORT=sse \
+           -p 8080:8080 \
+           calendar-mcp-server:latest
+
+# The same server.py handles both transports based on MCP_TRANSPORT env var
 ```
