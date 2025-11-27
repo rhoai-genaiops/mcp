@@ -14,7 +14,7 @@ calendarApi:
   enabled: true
   image:
     repository: rhoai-genaiops/calendar-api
-    tag: v1
+    tag: v2
     pullPolicy: IfNotPresent
   
   replicaCount: 1

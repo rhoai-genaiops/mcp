@@ -7,11 +7,22 @@ import json
 from datetime import datetime, timedelta
 import database_handler
 import configparser
+import os
 
 def load_config():
     config = configparser.ConfigParser()
     config.read('db.conf')
     return config['DEFAULT']
+
+def get_db_path():
+    """Get database path from environment variable or config"""
+    db_path = os.getenv('DATABASE_PATH')
+    if db_path:
+        # Remove .db extension if present in the path
+        return db_path.replace('.db', '')
+    else:
+        info = load_config()
+        return info['db_name']
 
 def create_test_schedules():
     """Create Redwood Digital University schedules for teachers and students"""
@@ -178,13 +189,19 @@ def create_test_schedules():
 def populate_database():
     """Populate the database with test schedules"""
     print("🗃️  Populating database with test data...")
-    
+
     # Load configuration
     info = load_config()
-    
-    # Initialize database handler
-    dbh = database_handler.DatabaseHandler(db_name=info['db_name'], check_same_thread=False)
-    
+
+    # Initialize database handler with DATABASE_PATH env var or config
+    db_name = get_db_path()
+    dbh = database_handler.DatabaseHandler(db_name=db_name, check_same_thread=False)
+
+    # Ensure the table exists before inserting data
+    columns = json.loads(info['columns'])
+    print(f"📋 Ensuring table '{info['table_name']}' exists...")
+    dbh.create_table(table_name=info['table_name'], columns=columns)
+
     # Create test schedules
     test_schedules = create_test_schedules()
     
@@ -208,12 +225,13 @@ def populate_database():
 def clear_test_data():
     """Remove all test data from the database"""
     print("🗑️  Clearing test data...")
-    
+
     # Load configuration
     info = load_config()
-    
-    # Initialize database handler
-    dbh = database_handler.DatabaseHandler(db_name=info['db_name'], check_same_thread=False)
+
+    # Initialize database handler with DATABASE_PATH env var or config
+    db_name = get_db_path()
+    dbh = database_handler.DatabaseHandler(db_name=db_name, check_same_thread=False)
     
     # Get test schedule IDs
     test_schedules = create_test_schedules()
