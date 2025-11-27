@@ -3,7 +3,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "redwood-calendar.fullname" . }}-frontend
-  namespace: {{ .Values.global.namespace }}
   labels:
     {{- include "redwood-calendar.labels" . | nindent 4 }}
     app.kubernetes.io/component: frontend

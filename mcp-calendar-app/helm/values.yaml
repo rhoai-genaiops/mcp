@@ -1,6 +1,5 @@
 # Global settings
 global:
-  namespace: ai501
   imageRegistry: "quay.io/"
   imagePullSecrets: []
 

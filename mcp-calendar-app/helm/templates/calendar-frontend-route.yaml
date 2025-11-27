@@ -3,7 +3,6 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: {{ include "redwood-calendar.fullname" . }}-frontend
-  namespace: {{ .Values.global.namespace }}
   labels:
     {{- include "redwood-calendar.labels" . | nindent 4 }}
     app.kubernetes.io/component: frontend
