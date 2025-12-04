@@ -15,10 +15,18 @@ spec:
     name: {{ include "redwood-calendar.fullname" . }}-frontend
     weight: 100
   port:
+    {{- if .Values.oauth.enabled }}
+    targetPort: https
+    {{- else }}
     targetPort: http
+    {{- end }}
   {{- if .Values.calendarFrontend.route.tls.enabled }}
   tls:
+    {{- if .Values.oauth.enabled }}
+    termination: reencrypt
+    {{- else }}
     termination: {{ .Values.calendarFrontend.route.tls.termination }}
+    {{- end }}
     insecureEdgeTerminationPolicy: Redirect
   {{- end }}
   wildcardPolicy: None

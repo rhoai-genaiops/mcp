@@ -22,31 +22,56 @@ class Method:
             return False
         return True
 
-    def get(self, dbh, schedule_id):
+    def get(self, dbh, schedule_id, user_id=None):
+        condition = {'sid': schedule_id}
+        if user_id:
+            condition['user_id'] = user_id
         return dbh.fetch_data(
             table_name=self.info['table_name'],
-            condition={'sid': schedule_id})
+            condition=condition)
 
-    def post(self, dbh, schedule):
-        if dbh.check_existence(self.info['table_name'], {'sid': schedule.sid}):
+    def post(self, dbh, schedule, user_id=None):
+        schedule_dict = schedule.dict()
+        # If user_id is provided, ensure it's set in the schedule
+        if user_id:
+            schedule_dict['user_id'] = user_id
+
+        condition = {'sid': schedule.sid}
+        if user_id:
+            condition['user_id'] = user_id
+
+        if dbh.check_existence(self.info['table_name'], condition):
             return False
-        if not self.check_params(schedule.dict()):
+        if not self.check_params(schedule_dict):
             return False
-        dbh.insert_data(self.info['table_name'], self.columns, schedule.dict())
+        dbh.insert_data(self.info['table_name'], self.columns, schedule_dict)
         return True
 
-    def update(self, dbh, schedule_id, schedule):
-        if not dbh.check_existence(self.info['table_name'], {'sid': schedule_id}):
+    def update(self, dbh, schedule_id, schedule, user_id=None):
+        schedule_dict = schedule.dict()
+        # If user_id is provided, ensure it's set in the schedule
+        if user_id:
+            schedule_dict['user_id'] = user_id
+
+        condition = {'sid': schedule_id}
+        if user_id:
+            condition['user_id'] = user_id
+
+        if not dbh.check_existence(self.info['table_name'], condition):
             return False
-        if not self.check_params(schedule.dict()):
+        if not self.check_params(schedule_dict):
             return False
-        dbh.update_data(self.info['table_name'], schedule.dict(), {'sid': schedule_id})
+        dbh.update_data(self.info['table_name'], schedule_dict, condition)
         return True
 
-    def delete(self, dbh, schedule_id):
-        if not dbh.check_existence(self.info['table_name'], {'sid': schedule_id}):
+    def delete(self, dbh, schedule_id, user_id=None):
+        condition = {'sid': schedule_id}
+        if user_id:
+            condition['user_id'] = user_id
+
+        if not dbh.check_existence(self.info['table_name'], condition):
             return False
-        dbh.delete_data(self.info['table_name'], {'sid': schedule_id})
+        dbh.delete_data(self.info['table_name'], condition)
         return True
 
 if __name__ == '__main__':

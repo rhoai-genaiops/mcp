@@ -110,3 +110,11 @@ securityContext:
   runAsNonRoot: true
   # runAsUser and fsGroup are omitted to allow OpenShift to assign them automatically
   # OpenShift will use UIDs/GIDs from the namespace's allowed range
+
+# OAuth Proxy configuration for multi-tenancy
+oauth:
+  enabled: true
+  image:
+    repository: openshift/oauth-proxy
+    tag: latest
+    pullPolicy: IfNotPresent

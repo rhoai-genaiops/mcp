@@ -12,6 +12,11 @@ spec:
   - port: {{ .Values.calendarFrontend.service.port }}
     targetPort: {{ .Values.calendarFrontend.service.targetPort }}
     name: http
+  {{- if .Values.oauth.enabled }}
+  - port: 8443
+    targetPort: 8443
+    name: https
+  {{- end }}
   selector:
     {{- include "redwood-calendar.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: frontend

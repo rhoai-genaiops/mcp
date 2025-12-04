@@ -24,18 +24,23 @@ def get_db_path():
         info = load_config()
         return info['db_name']
 
-def create_test_schedules():
-    """Create Redwood Digital University schedules for teachers and students"""
-    
+def create_test_schedules(user_id="demo"):
+    """Create Redwood Digital University schedules for teachers and students
+
+    Args:
+        user_id: User ID to assign to test schedules (default: 'demo')
+    """
+
     # Get current date and create schedules for this month
     today = datetime.now()
     current_month = today.month
     current_year = today.year
-    
+
     test_schedules = [
         # Today - Classes and Academic Activities
         {
             "sid": "class-cs301",
+            "user_id": user_id,
             "name": "CS 301: Machine Learning",
             "content": "Introduction to Neural Networks - Lecture Hall B203, Redwood Digital University",
             "category": "Lecture",
@@ -47,6 +52,7 @@ def create_test_schedules():
         },
         {
             "sid": "office-hours-001",
+            "user_id": user_id,
             "name": "Office Hours - Dr. Chen",
             "content": "Student consultations for AI Ethics course - Room 305, CS Building",
             "category": "Office Hours",
@@ -59,6 +65,7 @@ def create_test_schedules():
         # Tomorrow - Assignments and Labs
         {
             "sid": "lab-ai401",
+            "user_id": user_id,
             "name": "AI 401: Deep Learning Lab",
             "content": "Hands-on training with TensorFlow and PyTorch - Computer Lab 101",
             "category": "Lab",
@@ -70,6 +77,7 @@ def create_test_schedules():
         },
         {
             "sid": "assignment-due-001",
+            "user_id": user_id,
             "name": "Assignment Due: NLP Project",
             "content": "Submit Natural Language Processing final project - Canvas submission deadline",
             "category": "Assignment",
@@ -82,6 +90,7 @@ def create_test_schedules():
         # This week - Faculty and Student Activities
         {
             "sid": "faculty-meeting-001",
+            "user_id": user_id,
             "name": "Faculty Meeting: AI Department",
             "content": "Monthly department meeting - Discuss new curriculum for Generative AI track",
             "category": "Meeting",
@@ -93,6 +102,7 @@ def create_test_schedules():
         },
         {
             "sid": "thesis-defense-001",
+            "user_id": user_id,
             "name": "PhD Defense: Sarah Martinez",
             "content": "\"Explainable AI in Healthcare Applications\" - Conference Room A, Admin Building",
             "category": "Defense",
@@ -104,6 +114,7 @@ def create_test_schedules():
         },
         {
             "sid": "guest-lecture-001",
+            "user_id": user_id,
             "name": "Guest Lecture: Industry AI Trends",
             "content": "Dr. Alex Thompson from TechCorp AI - Auditorium Main Hall",
             "category": "Lecture",
@@ -116,6 +127,7 @@ def create_test_schedules():
         # Weekend - Student Activities
         {
             "sid": "study-group-001",
+            "user_id": user_id,
             "name": "Study Group: Quantum Computing",
             "content": "Student-led study session for QC 205 final exam - Library Study Room 12",
             "category": "Study Group",
@@ -127,6 +139,7 @@ def create_test_schedules():
         },
         {
             "sid": "workshop-001",
+            "user_id": user_id,
             "name": "AI Workshop: Ethics & Bias",
             "content": "Interactive workshop on responsible AI development - Student Center Room 201",
             "category": "Workshop",
@@ -139,6 +152,7 @@ def create_test_schedules():
         # Past completed activities
         {
             "sid": "grading-completed-001",
+            "user_id": user_id,
             "name": "Grading: Midterm Exams",
             "content": "Completed grading CS 201 midterm exams - 45 students processed",
             "category": "Grading",
@@ -150,6 +164,7 @@ def create_test_schedules():
         },
         {
             "sid": "seminar-completed-001",
+            "user_id": user_id,
             "name": "Research Seminar: Computer Vision",
             "content": "Presented latest research on object detection algorithms - Faculty Lounge",
             "category": "Seminar",
@@ -162,6 +177,7 @@ def create_test_schedules():
         # Additional university activities
         {
             "sid": "committee-meeting-001",
+            "user_id": user_id,
             "name": "Curriculum Committee",
             "content": "Review proposed changes to AI Master's program - Admin Building Room 401",
             "category": "Meeting",
@@ -173,6 +189,7 @@ def create_test_schedules():
         },
         {
             "sid": "student-consultation-001",
+            "user_id": user_id,
             "name": "Student Advising Session",
             "content": "Academic advising for graduate students - Course selection for next semester",
             "category": "Advising",
@@ -186,9 +203,17 @@ def create_test_schedules():
     
     return test_schedules
 
-def populate_database():
-    """Populate the database with test schedules"""
-    print("🗃️  Populating database with test data...")
+def populate_database(user_id=None):
+    """Populate the database with test schedules
+
+    Args:
+        user_id: User ID to assign to test schedules. If not provided, uses 'demo' or USER_ID env var.
+    """
+    # Get user_id from environment variable if not provided
+    if user_id is None:
+        user_id = os.getenv('USER_ID', 'demo')
+
+    print(f"🗃️  Populating database with test data for user: {user_id}...")
 
     # Load configuration
     info = load_config()
@@ -202,8 +227,8 @@ def populate_database():
     print(f"📋 Ensuring table '{info['table_name']}' exists...")
     dbh.create_table(table_name=info['table_name'], columns=columns)
 
-    # Create test schedules
-    test_schedules = create_test_schedules()
+    # Create test schedules for the specified user
+    test_schedules = create_test_schedules(user_id=user_id)
     
     # Insert test data
     success_count = 0

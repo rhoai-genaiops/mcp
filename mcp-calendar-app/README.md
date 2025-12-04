@@ -5,13 +5,24 @@ and Model Context Protocol (MCP) server for AI agent integration.
 
 ## 🎓 Overview
 
-This repository contains a complete university calendar management system designed for **Redwood Digital University**. 
+This repository contains a complete university calendar management system designed for **Redwood Digital University**.
 
 The system includes:
 - **📚 Academic Calendar Backend** - FastAPI-based REST API for calendar management
 - **🎨 Modern Web Frontend** - React-based user interface with beautiful design
 - **🤖 MCP Server Integration** - AI agent integration via Model Context Protocol
 - **🗄️ SQLite Database** - Lightweight database for development and testing
+- **👥 Multi-Tenant Support** - Complete user isolation with OpenShift OAuth integration
+
+## 🔐 Multi-Tenant Features
+
+The calendar system supports multiple users with complete data isolation:
+- **User Authentication**: OpenShift OAuth proxy integration
+- **Data Isolation**: Each user sees only their own events
+- **Secure**: No cross-user data access possible
+- **OpenShift Integration**: Works with htpasswd users (user0-user49)
+
+📖 **[View Multi-Tenant Setup Guide](MULTITENANT_SETUP.md)** for deployment instructions.
 
 ![Calendar System Overview](docs/pic1.png)
 

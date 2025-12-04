@@ -18,6 +18,9 @@ spec:
         {{- include "redwood-calendar.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: frontend
     spec:
+      {{- if .Values.oauth.enabled }}
+      serviceAccountName: {{ include "redwood-calendar.fullname" . }}-oauth-proxy
+      {{- end }}
       {{- with .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -25,6 +28,37 @@ spec:
       securityContext:
         {{- toYaml .Values.securityContext | nindent 8 }}
       containers:
+      {{- if .Values.oauth.enabled }}
+      - name: oauth-proxy
+        image: "{{ .Values.oauth.image.repository }}:{{ .Values.oauth.image.tag }}"
+        imagePullPolicy: {{ .Values.oauth.image.pullPolicy }}
+        ports:
+        - containerPort: 8443
+          name: https
+        args:
+        - --https-address=:8443
+        - --provider=openshift
+        - --openshift-service-account={{ include "redwood-calendar.fullname" . }}-oauth-proxy
+        - --upstream=http://localhost:8080
+        - --tls-cert=/etc/tls/private/tls.crt
+        - --tls-key=/etc/tls/private/tls.key
+        - --cookie-secret-file=/etc/proxy/secrets/session_secret
+        - --pass-user-bearer-token=false
+        - --pass-access-token=false
+        - --pass-user-headers=true
+        - --skip-provider-button=true
+        volumeMounts:
+        - mountPath: /etc/tls/private
+          name: oauth-tls
+        - mountPath: /etc/proxy/secrets
+          name: oauth-secret
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+      {{- end }}
       - name: calendar-frontend
         image: "{{ .Values.global.imageRegistry }}{{ .Values.calendarFrontend.image.repository }}:{{ .Values.calendarFrontend.image.tag }}"
         imagePullPolicy: {{ .Values.calendarFrontend.image.pullPolicy }}
@@ -75,6 +109,14 @@ spec:
       - name: nginx-config
         configMap:
           name: {{ include "redwood-calendar.fullname" . }}-frontend-nginx
+      {{- if .Values.oauth.enabled }}
+      - name: oauth-tls
+        secret:
+          secretName: {{ include "redwood-calendar.fullname" . }}-frontend-tls
+      - name: oauth-secret
+        secret:
+          secretName: {{ include "redwood-calendar.fullname" . }}-oauth-cookie
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
