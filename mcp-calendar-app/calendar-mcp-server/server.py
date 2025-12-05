@@ -37,8 +37,8 @@ PeriodType = Literal["week", "month", "semester"]
 # Create FastMCP server
 mcp = FastMCP("calendar-mcp-server")
 
-async def make_calendar_api_request(method: str, endpoint: str, data: dict = None) -> dict:
-    """Make a request to the Calendar API."""
+async def make_calendar_api_request(method: str, endpoint: str, data: dict = None):
+    """Make a request to the Calendar API. Returns dict with 'success' and either 'data' or 'error'."""
     url = f"{CALENDAR_API_BASE_URL}{endpoint}"
     headers = {"Content-Type": "application/json"}
 
@@ -47,30 +47,34 @@ async def make_calendar_api_request(method: str, endpoint: str, data: dict = Non
             if method.upper() == "GET":
                 async with session.get(url, headers=headers) as response:
                     if response.status == 200:
-                        return await response.json()
+                        return {"success": True, "data": await response.json()}
                     else:
-                        raise ValueError(f"API request failed with status {response.status}")
+                        error_text = await response.text()
+                        return {"success": False, "error": f"API request failed with status {response.status}: {error_text}"}
             elif method.upper() == "POST":
                 async with session.post(url, headers=headers, json=data) as response:
                     if response.status == 200:
-                        return await response.json()
+                        return {"success": True, "data": await response.json()}
                     else:
-                        raise ValueError(f"API request failed with status {response.status}")
+                        error_text = await response.text()
+                        return {"success": False, "error": f"API request failed with status {response.status}: {error_text}"}
             elif method.upper() == "PUT":
                 async with session.put(url, headers=headers, json=data) as response:
                     if response.status == 200:
-                        return await response.json()
+                        return {"success": True, "data": await response.json()}
                     else:
-                        raise ValueError(f"API request failed with status {response.status}")
+                        error_text = await response.text()
+                        return {"success": False, "error": f"API request failed with status {response.status}: {error_text}"}
             elif method.upper() == "DELETE":
                 async with session.delete(url, headers=headers) as response:
                     if response.status == 200:
-                        return await response.json()
+                        return {"success": True, "data": await response.json()}
                     else:
-                        raise ValueError(f"API request failed with status {response.status}")
+                        error_text = await response.text()
+                        return {"success": False, "error": f"API request failed with status {response.status}: {error_text}"}
     except Exception as e:
         logger.error(f"Calendar API request failed: {e}")
-        raise ValueError(f"Calendar API request failed: {str(e)}")
+        return {"success": False, "error": f"Calendar API request failed: {str(e)}"}
 
 @mcp.tool()
 async def get_all_events(
@@ -84,7 +88,11 @@ async def get_all_events(
         status: Filter by completion status (optional)
     """
     result = await make_calendar_api_request("GET", "/schedules")
-    events = result if isinstance(result, list) else []
+
+    if not result["success"]:
+        return f"❌ Error: {result['error']}"
+
+    events = result["data"] if isinstance(result["data"], list) else []
 
     # Apply filters
     if category:
@@ -123,7 +131,11 @@ async def get_event(event_id: str) -> str:
         event_id: Event ID to retrieve
     """
     result = await make_calendar_api_request("GET", f"/schedules/{event_id}")
-    event = result[0] if isinstance(result, list) and result else result
+
+    if not result["success"]:
+        return f"❌ Error: {result['error']}"
+
+    event = result["data"][0] if isinstance(result["data"], list) and result["data"] else result["data"]
 
     return f"""📚 Redwood Digital University Event Details:
 
@@ -152,13 +164,22 @@ async def create_event(
     """Create a new academic event in the calendar.
 
     Args:
-        name: Event name/title
-        category: Event category
-        level: Priority level (1=Low, 2=Medium, 3=High)
-        start_time: Start time in YYYY-MM-DD HH:MM:SS format
-        end_time: End time in YYYY-MM-DD HH:MM:SS format
+        name: Event name/title (required)
+        category: Event category (required) - must be one of: Lecture, Lab, Meeting, Office Hours, Assignment, Defense, Workshop, Study Group, Seminar, Grading, Advising
+        level: Priority level (required) - must be 1 (Low), 2 (Medium), or 3 (High)
+        start_time: Start time (required) - MUST be in YYYY-MM-DD HH:MM:SS format (e.g., "2024-12-05 14:00:00")
+        end_time: End time (required) - MUST be in YYYY-MM-DD HH:MM:SS format (e.g., "2024-12-05 15:00:00")
         content: Event description/details (optional)
+
+    Note: New events are automatically created with status=0.0 (not started). Do NOT try to set the status parameter.
     """
+    # Validate datetime format
+    try:
+        datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
+        datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S")
+    except ValueError as e:
+        return f"❌ Error: Invalid datetime format. Please use YYYY-MM-DD HH:MM:SS format. Details: {str(e)}"
+
     timestamp = int(datetime.now().timestamp() * 1000)
     sid = f"mcp-event-{timestamp}"
 
@@ -175,7 +196,12 @@ async def create_event(
     }
 
     result = await make_calendar_api_request("POST", "/schedules", event_data)
-    return f"✅ Event created successfully!\n\n🎓 **{result['name']}**\n📋 Category: {result['category']}\n📅 Time: {result['start_time']} - {result['end_time']}\n🆔 Event ID: {result['sid']}"
+
+    if not result["success"]:
+        return f"❌ Error: {result['error']}"
+
+    event = result["data"]
+    return f"✅ Event created successfully!\n\n🎓 **{event['name']}**\n📋 Category: {event['category']}\n📅 Time: {event['start_time']} - {event['end_time']}\n🆔 Event ID: {event['sid']}"
 
 @mcp.tool()
 async def update_event(
@@ -201,7 +227,12 @@ async def update_event(
         end_time: End time in YYYY-MM-DD HH:MM:SS format (optional)
     """
     # Get current event data first
-    current_event = await make_calendar_api_request("GET", f"/schedules/{event_id}")
+    current_result = await make_calendar_api_request("GET", f"/schedules/{event_id}")
+
+    if not current_result["success"]:
+        return f"❌ Error: {current_result['error']}"
+
+    current_event = current_result["data"]
     if isinstance(current_event, list) and current_event:
         current_event = current_event[0]
 
@@ -219,7 +250,12 @@ async def update_event(
     }
 
     result = await make_calendar_api_request("PUT", f"/schedules/{event_id}", update_data)
-    return f"✅ Event updated successfully!\n\n🎓 **{result['name']}**\n📋 Category: {result['category']}\n✅ Status: {int(result.get('status', 0) * 100)}% complete"
+
+    if not result["success"]:
+        return f"❌ Error: {result['error']}"
+
+    event = result["data"]
+    return f"✅ Event updated successfully!\n\n🎓 **{event['name']}**\n📋 Category: {event['category']}\n✅ Status: {int(event.get('status', 0) * 100)}% complete"
 
 @mcp.tool()
 async def delete_event(event_id: str) -> str:
@@ -228,7 +264,11 @@ async def delete_event(event_id: str) -> str:
     Args:
         event_id: Event ID to delete
     """
-    await make_calendar_api_request("DELETE", f"/schedules/{event_id}")
+    result = await make_calendar_api_request("DELETE", f"/schedules/{event_id}")
+
+    if not result["success"]:
+        return f"❌ Error: {result['error']}"
+
     return f"🗑️ Event deleted successfully: {event_id}"
 
 @mcp.tool()
@@ -238,7 +278,12 @@ async def search_events(query: str) -> str:
     Args:
         query: Search query to match against event names and descriptions
     """
-    all_events = await make_calendar_api_request("GET", "/schedules")
+    result = await make_calendar_api_request("GET", "/schedules")
+
+    if not result["success"]:
+        return f"❌ Error: {result['error']}"
+
+    all_events = result["data"]
 
     matching_events = []
     for event in all_events:
@@ -265,7 +310,12 @@ async def get_upcoming_events(
         days: Number of days to look ahead (1-30, default: 7)
         category: Filter by event category (optional)
     """
-    all_events = await make_calendar_api_request("GET", "/schedules")
+    result = await make_calendar_api_request("GET", "/schedules")
+
+    if not result["success"]:
+        return f"❌ Error: {result['error']}"
+
+    all_events = result["data"]
 
     now = datetime.now()
     future_date = now + timedelta(days=days)
@@ -301,7 +351,12 @@ async def get_events_by_date(date: str) -> str:
     Args:
         date: Date in YYYY-MM-DD format
     """
-    all_events = await make_calendar_api_request("GET", "/schedules")
+    result = await make_calendar_api_request("GET", "/schedules")
+
+    if not result["success"]:
+        return f"❌ Error: {result['error']}"
+
+    all_events = result["data"]
 
     date_events = []
     for event in all_events:
@@ -328,7 +383,12 @@ async def get_calendar_statistics(period: PeriodType = "month") -> str:
     Args:
         period: Time period for statistics
     """
-    all_events = await make_calendar_api_request("GET", "/schedules")
+    result = await make_calendar_api_request("GET", "/schedules")
+
+    if not result["success"]:
+        return f"❌ Error: {result['error']}"
+
+    all_events = result["data"]
 
     total_events = len(all_events)
     completed_events = len([e for e in all_events if e.get("status", 0) == 1.0])
