@@ -9,6 +9,7 @@ const Calendar = () => {
   const [schedules, setSchedules] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showEventModal, setShowEventModal] = useState(false);
   const [newSchedule, setNewSchedule] = useState({
@@ -23,10 +24,10 @@ const Calendar = () => {
     end_time: ""
   });
 
-  // Fetch schedules when the component mounts or the month changes
+  // Fetch schedules when the component mounts or the month/year changes
   useEffect(() => {
     fetchSchedules();
-  }, [currentMonth]);
+  }, [currentMonth, currentYear]);
 
   // Function to fetch schedules from the backend
   const fetchSchedules = () => {
@@ -41,7 +42,19 @@ const Calendar = () => {
 
   // Handle month navigation
   const handleMonthChange = (increment) => {
-    setCurrentMonth((prev) => (prev + increment + 12) % 12);
+    let newMonth = currentMonth + increment;
+    let newYear = currentYear;
+
+    if (newMonth < 0) {
+      newMonth = 11;
+      newYear = currentYear - 1;
+    } else if (newMonth > 11) {
+      newMonth = 0;
+      newYear = currentYear + 1;
+    }
+
+    setCurrentMonth(newMonth);
+    setCurrentYear(newYear);
   };
 
   // Handle form input changes
@@ -208,7 +221,6 @@ const Calendar = () => {
   };
 
   // Calculate the number of days in the current month
-  const currentYear = new Date().getFullYear();
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 

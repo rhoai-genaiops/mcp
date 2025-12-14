@@ -2,7 +2,7 @@ apiVersion: v2
 name: canopy-mcp-calendar
 description: A Helm chart for Canopy AI Calendar System at RDU
 type: application
-version: 1.0.2
+version: 1.0.3
 appVersion: "1.0.0"
 keywords:
   - calendar
