@@ -45,7 +45,7 @@ calendarFrontend:
   enabled: true
   image:
     repository: rhoai-genaiops/calendar-frontend
-    tag: v1
+    tag: v2
     pullPolicy: IfNotPresent
 
   replicaCount: 1
