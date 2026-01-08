@@ -84,8 +84,8 @@ async def get_all_events(
     """Get all events/schedules from the Redwood Digital University calendar.
 
     Args:
-        category: Filter by event category (optional)
-        status: Filter by completion status (optional)
+        category (str, optional): Filter by event category (optional)
+        status (str, optional): Filter by completion status (optional)
     """
     result = await make_calendar_api_request("GET", "/schedules")
 
@@ -128,7 +128,7 @@ async def get_event(event_id: str) -> str:
     """Get detailed information about a specific event by ID.
 
     Args:
-        event_id: Event ID to retrieve
+        event_id (str): Event ID to retrieve
     """
     result = await make_calendar_api_request("GET", f"/schedules/{event_id}")
 
@@ -156,7 +156,7 @@ async def get_event(event_id: str) -> str:
 async def create_event(
     name: str,
     category: CategoryType,
-    level: Literal[1, 2, 3],
+    level: int | str,
     start_time: str,
     end_time: str,
     content: str = ""
@@ -164,12 +164,12 @@ async def create_event(
     """Create a new academic event in the calendar.
 
     Args:
-        name: Event name/title (required)
-        category: Event category (required) - must be one of: Lecture, Lab, Meeting, Office Hours, Assignment, Defense, Workshop, Study Group, Seminar, Grading, Advising
-        level: Priority level (required) - must be 1 (Low), 2 (Medium), or 3 (High)
-        start_time: Start time (required) - MUST be in YYYY-MM-DD HH:MM:SS format (e.g., "2024-12-05 14:00:00")
-        end_time: End time (required) - MUST be in YYYY-MM-DD HH:MM:SS format (e.g., "2024-12-05 15:00:00")
-        content: Event description/details (optional)
+        name (str): Event name/title (required)
+        category (str): Event category (required) - must be one of: Lecture, Lab, Meeting, Office Hours, Assignment, Defense, Workshop, Study Group, Seminar, Grading, Advising
+        level (int): Priority level (required) - must be 1 (Low), 2 (Medium), or 3 (High)
+        start_time (str): Start time (required) - MUST be in YYYY-MM-DD HH:MM:SS format (e.g., "2024-12-05 14:00:00")
+        end_time (str): End time (required) - MUST be in YYYY-MM-DD HH:MM:SS format (e.g., "2024-12-05 15:00:00")
+        content (str, optional): Event description/details (optional)
 
     Note: New events are automatically created with status=0.0 (not started). Do NOT try to set the status parameter.
     """
@@ -188,7 +188,7 @@ async def create_event(
         "name": name,
         "content": content,
         "category": category,
-        "level": level,
+        "level": int(level),
         "status": 0.0,
         "creation_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "start_time": start_time,
@@ -217,14 +217,14 @@ async def update_event(
     """Update an existing event in the calendar.
 
     Args:
-        event_id: Event ID to update
-        name: Event name/title (optional)
-        content: Event description/details (optional)
-        category: Event category (optional)
-        level: Priority level 1-3 (optional)
-        status: Completion status 0.0-1.0 (optional)
-        start_time: Start time in YYYY-MM-DD HH:MM:SS format (optional)
-        end_time: End time in YYYY-MM-DD HH:MM:SS format (optional)
+        event_id (str): Event ID to update
+        name (str, optional): Event name/title (optional)
+        content (str, optional): Event description/details (optional)
+        category (str, optional): Event category (optional)
+        level (int, optional): Priority level 1-3 (optional)
+        status (float, optional): Completion status 0.0-1.0 (optional)
+        start_time (str, optional): Start time in YYYY-MM-DD HH:MM:SS format (optional)
+        end_time (str, optional): End time in YYYY-MM-DD HH:MM:SS format (optional)
     """
     # Get current event data first
     current_result = await make_calendar_api_request("GET", f"/schedules/{event_id}")
@@ -262,7 +262,7 @@ async def delete_event(event_id: str) -> str:
     """Delete an event from the calendar.
 
     Args:
-        event_id: Event ID to delete
+        event_id (str): Event ID to delete
     """
     result = await make_calendar_api_request("DELETE", f"/schedules/{event_id}")
 
@@ -276,7 +276,7 @@ async def search_events(query: str) -> str:
     """Search events by name or content.
 
     Args:
-        query: Search query to match against event names and descriptions
+        query (str): Search query to match against event names and descriptions
     """
     result = await make_calendar_api_request("GET", "/schedules")
 
@@ -307,8 +307,8 @@ async def get_upcoming_events(
     """Get upcoming events within a specified number of days.
 
     Args:
-        days: Number of days to look ahead (1-30, default: 7)
-        category: Filter by event category (optional)
+        days (int): Number of days to look ahead (1-30, default: 7)
+        category (str, optional): Filter by event category (optional)
     """
     result = await make_calendar_api_request("GET", "/schedules")
 
@@ -349,7 +349,7 @@ async def get_events_by_date(date: str) -> str:
     """Get all events for a specific date.
 
     Args:
-        date: Date in YYYY-MM-DD format
+        date (str): Date in YYYY-MM-DD format
     """
     result = await make_calendar_api_request("GET", "/schedules")
 
@@ -381,7 +381,7 @@ async def get_calendar_statistics(period: PeriodType = "month") -> str:
     """Get calendar statistics and overview.
 
     Args:
-        period: Time period for statistics
+        period (str): Time period for statistics
     """
     result = await make_calendar_api_request("GET", "/schedules")
 
