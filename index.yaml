@@ -3,6 +3,29 @@ entries:
   canopy-mcp-calendar:
   - apiVersion: v2
     appVersion: 1.0.0
+    created: "2026-01-08T08:48:45.426878217Z"
+    description: A Helm chart for Canopy AI Calendar System at RDU
+    digest: d9d4844fe3be2dcb2e40f5e2994ae83b104ee87ef3123cc579b1e37ac233db2f
+    home: https://github.com/rhoai-genaiops/mcp
+    icon: https://cdn-icons-png.flaticon.com/512/1067/1067374.png
+    keywords:
+    - calendar
+    - university
+    - mcp
+    - ai
+    maintainers:
+    - name: ckavili
+    - name: RHRolun
+    - name: rcarrata
+    name: canopy-mcp-calendar
+    sources:
+    - https://github.com/rhoai-genaiops/mcp
+    type: application
+    urls:
+    - https://github.com/rhoai-genaiops/mcp/releases/download/canopy-mcp-calendar-1.0.4/canopy-mcp-calendar-1.0.4.tgz
+    version: 1.0.4
+  - apiVersion: v2
+    appVersion: 1.0.0
     created: "2025-12-15T08:33:52.197430117Z"
     description: A Helm chart for Canopy AI Calendar System at RDU
     digest: 5a28db3317f43bf14d1aaf6ef118395dd4e0e6ab6cce81657f85acec5a922f45
@@ -91,4 +114,4 @@ entries:
     urls:
     - https://github.com/rhoai-genaiops/mcp/releases/download/canopy-mcp-calendar-1.0.0/canopy-mcp-calendar-1.0.0.tgz
     version: 1.0.0
-generated: "2025-12-15T08:33:52.19744779Z"
+generated: "2026-01-08T08:48:45.426905889Z"
