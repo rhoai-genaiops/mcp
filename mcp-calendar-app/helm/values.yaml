@@ -79,7 +79,7 @@ calendarMcpServer:
   enabled: true
   image:
     repository: rhoai-genaiops/calendar-mcp-server
-    tag: v2
+    tag: v3
     pullPolicy: IfNotPresent
   
   replicaCount: 1
