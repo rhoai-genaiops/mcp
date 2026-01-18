@@ -212,3 +212,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# MCP Calendar Server Auth - Tests folder
+mcp-calendar-app/calendar-mcp-server-auth/tests
