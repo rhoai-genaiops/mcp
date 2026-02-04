@@ -59,6 +59,7 @@ OAUTH_AVAILABLE = LOCAL_AUTH_AVAILABLE and FASTMCP_AUTH_AVAILABLE
 MCP_TRANSPORT = os.getenv("MCP_TRANSPORT", "stdio")  # "stdio" or "sse"
 MCP_PORT = int(os.getenv("MCP_PORT", "3000"))
 MCP_HOST = os.getenv("MCP_HOST", "0.0.0.0")
+MCP_PATH = os.getenv("MCP_PATH", "/mcp")  # Standard MCP endpoint path (was /sse)
 CALENDAR_API_BASE_URL = os.getenv("CALENDAR_API_BASE_URL", "http://127.0.0.1:8000")
 
 # Type definitions for enum validation
@@ -82,16 +83,16 @@ if MCP_TRANSPORT.lower() == "sse" and OAUTH_AVAILABLE and auth_config:
     )
 
     # Pass the token verifier as the auth provider
-    logger.info(f"✅ Token verifier created: {token_verifier}")
-    logger.info(f"   Introspection endpoint: {auth_config.introspection_endpoint}")
-    logger.info(f"   Server URL: {auth_config.server_url}")
-    logger.info(f"   Required scope: {auth_config.MCP_SCOPE}")
+    logger.info(f"Token verifier created: {token_verifier}")
+    logger.info(f"  Introspection endpoint: {auth_config.introspection_endpoint}")
+    logger.info(f"  Server URL: {auth_config.server_url}")
+    logger.info(f"  Required scope: {auth_config.MCP_SCOPE}")
 
     mcp = FastMCP(
         "calendar-mcp-server-auth",
         auth=token_verifier,
     )
-    logger.info(f"✅ FastMCP initialized with auth provider")
+    logger.info(f"FastMCP initialized with auth provider")
 else:
     # STDIO mode (local, auth handled by client)
     mcp = FastMCP("calendar-mcp-server-auth")
@@ -153,7 +154,7 @@ async def get_all_events(
     result = await make_calendar_api_request("GET", "/schedules")
 
     if not result["success"]:
-        return f"❌ Error: {result['error']}"
+        return f"Error: {result['error']}"
 
     events = result["data"] if isinstance(result["data"], list) else []
 
@@ -173,11 +174,11 @@ async def get_all_events(
 
     summary = f"Found {len(events)} events in Redwood Digital University calendar\n\n"
     event_list = "\n".join([
-        f"• {event['name']} ({event['category']})\n"
-        f"  📅 {event['start_time']} - {event['end_time']}\n"
-        f"  📋 {event.get('content', 'No description')}\n"
-        f"  🎯 Priority: {['', 'Low', 'Medium', 'High'][event.get('level', 1)]}\n"
-        f"  ✅ Status: {int(event.get('status', 0) * 100)}% complete\n"
+        f"- {event['name']} ({event['category']})\n"
+        f"  Time: {event['start_time']} - {event['end_time']}\n"
+        f"  Description: {event.get('content', 'No description')}\n"
+        f"  Priority: {['', 'Low', 'Medium', 'High'][event.get('level', 1)]}\n"
+        f"  Status: {int(event.get('status', 0) * 100)}% complete\n"
         for event in events[:10]
     ])
 
@@ -196,24 +197,24 @@ async def get_event(event_id: str) -> str:
     result = await make_calendar_api_request("GET", f"/schedules/{event_id}")
 
     if not result["success"]:
-        return f"❌ Error: {result['error']}"
+        return f"Error: {result['error']}"
 
     event = result["data"][0] if isinstance(result["data"], list) and result["data"] else result["data"]
 
-    return f"""📚 Redwood Digital University Event Details:
+    return f"""Redwood Digital University Event Details:
 
-🎓 **{event['name']}**
-📋 **Category:** {event['category']}
-📝 **Description:** {event.get('content', 'No description provided')}
+**{event['name']}**
+Category: {event['category']}
+Description: {event.get('content', 'No description provided')}
 
-📅 **Schedule:**
-• Start: {event['start_time']}
-• End: {event['end_time']}
+Schedule:
+- Start: {event['start_time']}
+- End: {event['end_time']}
 
-🎯 **Priority:** {['', 'Low', 'Medium', 'High'][event.get('level', 1)]}
-✅ **Status:** {int(event.get('status', 0) * 100)}% complete
-🆔 **Event ID:** {event['sid']}
-🕐 **Created:** {event.get('creation_time', 'Unknown')}"""
+Priority: {['', 'Low', 'Medium', 'High'][event.get('level', 1)]}
+Status: {int(event.get('status', 0) * 100)}% complete
+Event ID: {event['sid']}
+Created: {event.get('creation_time', 'Unknown')}"""
 
 @mcp.tool()
 async def create_event(
@@ -241,7 +242,7 @@ async def create_event(
         datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
         datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S")
     except ValueError as e:
-        return f"❌ Error: Invalid datetime format. Please use YYYY-MM-DD HH:MM:SS format. Details: {str(e)}"
+        return f"Error: Invalid datetime format. Please use YYYY-MM-DD HH:MM:SS format. Details: {str(e)}"
 
     timestamp = int(datetime.now().timestamp() * 1000)
     sid = f"mcp-event-{timestamp}"
@@ -261,10 +262,10 @@ async def create_event(
     result = await make_calendar_api_request("POST", "/schedules", event_data)
 
     if not result["success"]:
-        return f"❌ Error: {result['error']}"
+        return f"Error: {result['error']}"
 
     event = result["data"]
-    return f"✅ Event created successfully!\n\n🎓 **{event['name']}**\n📋 Category: {event['category']}\n📅 Time: {event['start_time']} - {event['end_time']}\n🆔 Event ID: {event['sid']}"
+    return f"Event created successfully!\n\n**{event['name']}**\nCategory: {event['category']}\nTime: {event['start_time']} - {event['end_time']}\nEvent ID: {event['sid']}"
 
 @mcp.tool()
 async def update_event(
@@ -293,7 +294,7 @@ async def update_event(
     current_result = await make_calendar_api_request("GET", f"/schedules/{event_id}")
 
     if not current_result["success"]:
-        return f"❌ Error: {current_result['error']}"
+        return f"Error: {current_result['error']}"
 
     current_event = current_result["data"]
     if isinstance(current_event, list) and current_event:
@@ -315,10 +316,10 @@ async def update_event(
     result = await make_calendar_api_request("PUT", f"/schedules/{event_id}", update_data)
 
     if not result["success"]:
-        return f"❌ Error: {result['error']}"
+        return f"Error: {result['error']}"
 
     event = result["data"]
-    return f"✅ Event updated successfully!\n\n🎓 **{event['name']}**\n📋 Category: {event['category']}\n✅ Status: {int(event.get('status', 0) * 100)}% complete"
+    return f"Event updated successfully!\n\n**{event['name']}**\nCategory: {event['category']}\nStatus: {int(event.get('status', 0) * 100)}% complete"
 
 @mcp.tool()
 async def delete_event(event_id: str) -> str:
@@ -330,9 +331,9 @@ async def delete_event(event_id: str) -> str:
     result = await make_calendar_api_request("DELETE", f"/schedules/{event_id}")
 
     if not result["success"]:
-        return f"❌ Error: {result['error']}"
+        return f"Error: {result['error']}"
 
-    return f"🗑️ Event deleted successfully: {event_id}"
+    return f"Event deleted successfully: {event_id}"
 
 @mcp.tool()
 async def search_events(query: str) -> str:
@@ -344,7 +345,7 @@ async def search_events(query: str) -> str:
     result = await make_calendar_api_request("GET", "/schedules")
 
     if not result["success"]:
-        return f"❌ Error: {result['error']}"
+        return f"Error: {result['error']}"
 
     all_events = result["data"]
 
@@ -354,9 +355,9 @@ async def search_events(query: str) -> str:
             query.lower() in event.get("content", "").lower()):
             matching_events.append(event)
 
-    summary = f"🔍 Search results for '{query}': {len(matching_events)} events found\n\n"
+    summary = f"Search results for '{query}': {len(matching_events)} events found\n\n"
     event_list = "\n".join([
-        f"• {event['name']} ({event['category']})\n  📅 {event['start_time']}"
+        f"- {event['name']} ({event['category']})\n  {event['start_time']}"
         for event in matching_events[:10]
     ])
 
@@ -376,7 +377,7 @@ async def get_upcoming_events(
     result = await make_calendar_api_request("GET", "/schedules")
 
     if not result["success"]:
-        return f"❌ Error: {result['error']}"
+        return f"Error: {result['error']}"
 
     all_events = result["data"]
 
@@ -395,13 +396,13 @@ async def get_upcoming_events(
 
     upcoming_events.sort(key=lambda x: x["start_time"])
 
-    summary = f"📅 Upcoming events in next {days} day{'s' if days != 1 else ''}"
+    summary = f"Upcoming events in next {days} day{'s' if days != 1 else ''}"
     if category:
         summary += f" (filtered by {category})"
     summary += f": {len(upcoming_events)} found\n\n"
 
     event_list = "\n".join([
-        f"• {event['name']} ({event['category']})\n  📅 {event['start_time']}"
+        f"- {event['name']} ({event['category']})\n  {event['start_time']}"
         for event in upcoming_events[:10]
     ])
 
@@ -417,7 +418,7 @@ async def get_events_by_date(date: str) -> str:
     result = await make_calendar_api_request("GET", "/schedules")
 
     if not result["success"]:
-        return f"❌ Error: {result['error']}"
+        return f"Error: {result['error']}"
 
     all_events = result["data"]
 
@@ -430,10 +431,10 @@ async def get_events_by_date(date: str) -> str:
         except:
             continue
 
-    summary = f"📅 Events on {date}: {len(date_events)} found\n\n"
+    summary = f"Events on {date}: {len(date_events)} found\n\n"
 
     event_list = "\n".join([
-        f"• {event['name']} ({event['category']})\n  🕐 {event['start_time'].split()[1]} - {event['end_time'].split()[1]}"
+        f"- {event['name']} ({event['category']})\n  {event['start_time'].split()[1]} - {event['end_time'].split()[1]}"
         for event in date_events
     ])
 
@@ -468,7 +469,7 @@ async def get_calendar_statistics(period: PeriodType = "month") -> str:
     result = await make_calendar_api_request("GET", "/schedules")
 
     if not result["success"]:
-        return f"❌ Error: {result['error']}"
+        return f"Error: {result['error']}"
 
     all_events = result["data"]
 
@@ -483,37 +484,37 @@ async def get_calendar_statistics(period: PeriodType = "month") -> str:
         categories[cat] = categories.get(cat, 0) + 1
 
     category_breakdown = "\n".join([
-        f"• {cat}: {count} events"
+        f"- {cat}: {count} events"
         for cat, count in sorted(categories.items())
     ])
 
     completion_rate = (completed_events / total_events * 100) if total_events > 0 else 0
 
-    return f"""📊 Redwood Digital University Calendar Statistics ({period})
+    return f"""Redwood Digital University Calendar Statistics ({period})
 
-📈 **Overview:**
-• Total Events: {total_events}
-• Completed: {completed_events} ({completion_rate:.1f}%)
-• In Progress: {in_progress_events}
-• Pending: {pending_events}
+**Overview:**
+- Total Events: {total_events}
+- Completed: {completed_events} ({completion_rate:.1f}%)
+- In Progress: {in_progress_events}
+- Pending: {pending_events}
 
-📋 **By Category:**
+**By Category:**
 {category_breakdown}
 
-🎯 **Academic Activity Level:** {'High' if total_events > 50 else 'Medium' if total_events > 20 else 'Low'}"""
+**Academic Activity Level:** {'High' if total_events > 50 else 'Medium' if total_events > 20 else 'Low'}"""
 
 if __name__ == "__main__":
-    logger.info("🎓 Starting Redwood Digital University Calendar MCP Server")
-    logger.info(f"📡 Calendar API URL: {CALENDAR_API_BASE_URL}")
-    logger.info(f"🚀 Transport mode: {MCP_TRANSPORT}")
+    logger.info("Starting Redwood Digital University Calendar MCP Server")
+    logger.info(f"Calendar API URL: {CALENDAR_API_BASE_URL}")
+    logger.info(f"Transport mode: {MCP_TRANSPORT}")
 
     if MCP_TRANSPORT.lower() == "sse":
-        logger.info(f"🔐 OAuth 2.1 enabled for SSE transport")
+        logger.info("OAuth 2.1 enabled for SSE transport")
 
         # Validate OAuth configuration for SSE mode
         if not OAUTH_AVAILABLE:
             logger.error("SSE mode requires OAuth modules (mcp.server.auth)")
-            logger.error("   Install with: pip install 'mcp[auth]'")
+            logger.error("  Install with: pip install 'mcp[auth]'")
             raise RuntimeError("OAuth modules not available for SSE mode")
 
         if not auth_config:
@@ -523,15 +524,15 @@ if __name__ == "__main__":
         # Validate client secret is configured
         if not auth_config.OAUTH_CLIENT_SECRET:
             logger.error("OAUTH_CLIENT_SECRET must be set for SSE mode")
-            logger.error("   Set environment variable: export OAUTH_CLIENT_SECRET=your-secret-here")
+            logger.error("  Set environment variable: export OAUTH_CLIENT_SECRET=your-secret-here")
             raise ValueError("OAUTH_CLIENT_SECRET is required for SSE mode")
 
-        logger.info(f"🔑 Authorization Server: {auth_config.auth_base_url}")
-        logger.info(f"🎯 Required Scope: {auth_config.MCP_SCOPE}")
-        logger.info(f"📄 Metadata available via MCP resource: oauth-protected-resource://metadata")
-        logger.info(f"🔄 Starting SSE server on {MCP_HOST}:{MCP_PORT}...")
-        mcp.run(transport="sse", host=MCP_HOST, port=MCP_PORT)
+        logger.info(f"Authorization Server: {auth_config.auth_base_url}")
+        logger.info(f"Required Scope: {auth_config.MCP_SCOPE}")
+        logger.info(f"Metadata available via MCP resource: oauth-protected-resource://metadata")
+        logger.info(f"Starting SSE server on {MCP_HOST}:{MCP_PORT}{MCP_PATH}...")
+        mcp.run(transport="sse", host=MCP_HOST, port=MCP_PORT, path=MCP_PATH)
     else:
-        logger.info("🔄 Starting stdio server (local mode - auth handled by client)...")
-        logger.info("ℹ️  In stdio mode, OAuth is managed by the MCP client (VS Code, etc.)")
+        logger.info("Starting stdio server (local mode - auth handled by client)...")
+        logger.info("In stdio mode, OAuth is managed by the MCP client (VS Code, etc.)")
         mcp.run(transport="stdio")
