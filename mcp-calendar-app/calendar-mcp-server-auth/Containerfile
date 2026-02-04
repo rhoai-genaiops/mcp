@@ -1,0 +1,43 @@
+# Use Python 3.11 base image
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements and install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy all server code including auth modules
+COPY server.py .
+COPY auth.py .
+COPY token_verifier.py .
+
+# Make server executable
+RUN chmod +x server.py
+
+# Create non-root user for security
+RUN useradd -r -s /bin/false mcp-user && \
+    chown -R mcp-user:mcp-user /app
+
+# Switch to non-root user
+USER mcp-user
+
+# Default environment variables for SSE mode with OAuth
+ENV MCP_TRANSPORT="sse"
+ENV MCP_HOST="0.0.0.0"
+ENV MCP_PORT="3000"
+ENV CALENDAR_API_BASE_URL="http://calendar-api:8000"
+
+# Keycloak OAuth defaults (override at runtime)
+ENV AUTH_HOST="keycloak"
+ENV AUTH_PORT="8080"
+ENV AUTH_REALM="master"
+ENV HOST="localhost"
+ENV PORT="3000"
+
+# Expose the SSE port
+EXPOSE 3000
+
+# Run the MCP server (automatically selects transport based on MCP_TRANSPORT env var)
+CMD ["python", "server.py"]
