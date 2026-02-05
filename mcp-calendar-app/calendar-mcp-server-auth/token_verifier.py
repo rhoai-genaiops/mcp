@@ -83,11 +83,16 @@ class IntrospectionTokenVerifier(AuthProvider):
         logger.info(f"🔍 verify_token called with token: {token[:40]}...")
         print(f"DEBUG: verify_token called with token: {token[:40]}...", flush=True)
 
-        # Security: only allow localhost HTTP in development
-        if not self.introspection_endpoint.startswith(
-            ("https://", "http://localhost", "http://127.0.0.1")
-        ):
-            logger.error("Introspection endpoint must use HTTPS in production")
+        # Security: allow HTTPS, localhost HTTP, or internal Kubernetes services
+        allowed_prefixes = (
+            "https://",
+            "http://localhost",
+            "http://127.0.0.1",
+        )
+        # Also allow internal Kubernetes service URLs (*.svc, *.svc.cluster.local)
+        is_internal_k8s = ".svc" in self.introspection_endpoint and self.introspection_endpoint.startswith("http://")
+        if not (self.introspection_endpoint.startswith(allowed_prefixes) or is_internal_k8s):
+            logger.error("Introspection endpoint must use HTTPS in production or be an internal Kubernetes service")
             return None
 
         try:

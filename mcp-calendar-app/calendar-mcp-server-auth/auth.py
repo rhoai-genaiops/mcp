@@ -31,19 +31,31 @@ class Config:
     # MCP scope
     MCP_SCOPE = os.getenv("MCP_SCOPE", "mcp:tools")
 
+    # Direct URL overrides (for Kubernetes/external deployment)
+    OAUTH_INTROSPECTION_URL = os.getenv("OAUTH_INTROSPECTION_URL", "")
+    OAUTH_ISSUER_URL = os.getenv("OAUTH_ISSUER_URL", "")
+    SERVER_URL = os.getenv("SERVER_URL", "")  # MCP server's own URL (for audience validation)
+
     @property
     def server_url(self):
         """MCP server URL (the protected resource)."""
+        if self.SERVER_URL:
+            return self.SERVER_URL.rstrip("/")
         return f"http://{self.HOST}:{self.PORT}"
 
     @property
     def auth_base_url(self):
         """Keycloak base URL."""
+        if self.OAUTH_ISSUER_URL:
+            # Use provided issuer URL, ensure trailing slash
+            return self.OAUTH_ISSUER_URL.rstrip("/") + "/"
         return f"http://{self.AUTH_HOST}:{self.AUTH_PORT}/realms/{self.AUTH_REALM}/"
 
     @property
     def introspection_endpoint(self):
         """Token introspection endpoint (RFC 7662)."""
+        if self.OAUTH_INTROSPECTION_URL:
+            return self.OAUTH_INTROSPECTION_URL
         return f"{self.auth_base_url}protocol/openid-connect/token/introspect"
 
     @property
@@ -140,11 +152,16 @@ async def validate_token(token: str) -> Optional[AccessToken]:
         AccessToken if valid, None otherwise
     """
 
-    # Security: only allow localhost HTTP in development
-    if not config.introspection_endpoint.startswith(
-        ("https://", "http://localhost", "http://127.0.0.1")
-    ):
-        logger.error("Introspection endpoint must use HTTPS in production")
+    # Security: allow HTTPS, localhost HTTP, or internal Kubernetes services
+    allowed_prefixes = (
+        "https://",
+        "http://localhost",
+        "http://127.0.0.1",
+    )
+    # Also allow internal Kubernetes service URLs (*.svc, *.svc.cluster.local)
+    is_internal_k8s = ".svc" in config.introspection_endpoint and config.introspection_endpoint.startswith("http://")
+    if not (config.introspection_endpoint.startswith(allowed_prefixes) or is_internal_k8s):
+        logger.error("Introspection endpoint must use HTTPS in production or be an internal Kubernetes service")
         return None
 
     try:
