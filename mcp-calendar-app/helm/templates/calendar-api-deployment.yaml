@@ -1,0 +1,89 @@
+{{- if .Values.calendarApi.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "redwood-calendar.fullname" . }}-api
+  labels:
+    {{- include "redwood-calendar.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  replicas: {{ .Values.calendarApi.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "redwood-calendar.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        {{- include "redwood-calendar.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+      - name: calendar-api
+        image: "{{ .Values.global.imageRegistry }}{{ .Values.calendarApi.image.repository }}:{{ .Values.calendarApi.image.tag }}"
+        imagePullPolicy: {{ .Values.calendarApi.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.calendarApi.service.targetPort }}
+          name: http
+        env:
+        - name: DATABASE_PATH
+          value: "/app/data/CalendarDB.db"
+        - name: SQLITE_TMPDIR
+          value: "/tmp"
+        - name: TMPDIR
+          value: "/tmp"
+        - name: UNIVERSITY_NAME
+          value: {{ .Values.university.name | quote }}
+        - name: SYSTEM_BRANDING
+          value: {{ .Values.university.systemBranding | quote }}
+        resources:
+          {{- toYaml .Values.calendarApi.resources | nindent 12 }}
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: calendar-data
+          mountPath: /app/data
+        - name: tmp
+          mountPath: /tmp
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: calendar-data
+        persistentVolumeClaim:
+          claimName: {{ include "redwood-calendar.fullname" . }}-api-pvc
+      - name: tmp
+        emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

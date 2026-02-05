@@ -1,0 +1,12 @@
+{{- if .Values.calendarFrontend.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "redwood-calendar.fullname" . }}-frontend-config
+  labels:
+    {{- include "redwood-calendar.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+data:
+  REACT_APP_UNIVERSITY_NAME: {{ .Values.university.name | quote }}
+  REACT_APP_SYSTEM_BRANDING: {{ .Values.university.systemBranding | quote }}
+{{- end }}

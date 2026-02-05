@@ -1,0 +1,25 @@
+{{- if and .Values.calendarFrontend.enabled .Values.calendarFrontend.route.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "redwood-calendar.fullname" . }}-frontend
+  labels:
+    {{- include "redwood-calendar.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  {{- if .Values.calendarFrontend.route.host }}
+  host: {{ .Values.calendarFrontend.route.host }}
+  {{- end }}
+  to:
+    kind: Service
+    name: {{ include "redwood-calendar.fullname" . }}-frontend
+    weight: 100
+  port:
+    targetPort: http
+  {{- if .Values.calendarFrontend.route.tls.enabled }}
+  tls:
+    termination: {{ .Values.calendarFrontend.route.tls.termination }}
+    insecureEdgeTerminationPolicy: Redirect
+  {{- end }}
+  wildcardPolicy: None
+{{- end }}

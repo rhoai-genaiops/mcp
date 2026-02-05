@@ -1,0 +1,17 @@
+{{- if .Values.calendarMcpServer.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "redwood-calendar.fullname" . }}-mcp-server-config
+  labels:
+    {{- include "redwood-calendar.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-server
+data:
+  CALENDAR_API_BASE_URL: "http://{{ include "redwood-calendar.fullname" . }}-api:{{ .Values.calendarApi.service.port }}"
+  UNIVERSITY_NAME: {{ .Values.university.name | quote }}
+  SYSTEM_BRANDING: {{ .Values.university.systemBranding | quote }}
+  LOG_LEVEL: {{ .Values.calendarMcpServer.config.logLevel | quote }}
+  MCP_TRANSPORT: "sse"
+  MCP_PORT: "8080"
+  MCP_HOST: "0.0.0.0"
+{{- end }}

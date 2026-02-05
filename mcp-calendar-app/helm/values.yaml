@@ -1,0 +1,112 @@
+# Global settings
+global:
+  imageRegistry: "quay.io/"
+  imagePullSecrets: []
+
+# University branding
+university:
+  name: "Redwood Digital University"
+  systemBranding: "Powered by CanopyAI"
+
+# Calendar API configuration
+calendarApi:
+  enabled: true
+  image:
+    repository: rhoai-genaiops/calendar-api
+    tag: v2
+    pullPolicy: IfNotPresent
+  
+  replicaCount: 1
+  
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+  
+  database:
+    initJob:
+      enabled: true
+
+# Calendar Frontend configuration
+calendarFrontend:
+  enabled: true
+  image:
+    repository: rhoai-genaiops/calendar-frontend
+    tag: v2
+    pullPolicy: IfNotPresent
+
+  replicaCount: 1
+
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  
+  route:
+    enabled: true
+    host: ""
+    tls:
+      enabled: true
+      termination: edge
+  
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+  # API backend URL for nginx proxy
+  # If empty, will auto-generate: http://<release-name>-canopy-mcp-calendar-api:<port>
+  apiUrl: ""
+
+# Calendar MCP Server configuration
+calendarMcpServer:
+  enabled: true
+  image:
+    repository: rhoai-genaiops/calendar-mcp-server
+    tag: v3
+    pullPolicy: IfNotPresent
+  
+  replicaCount: 1
+  
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "1Gi"
+      cpu: "200m"
+  
+  config:
+    logLevel: INFO
+
+# Common configuration
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  # runAsUser and fsGroup are omitted to allow OpenShift to assign them automatically
+  # OpenShift will use UIDs/GIDs from the namespace's allowed range

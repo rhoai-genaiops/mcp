@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP OAuth 2.1 Authorization Flow</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #e0e0e0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 10px;
+            font-size: 2.2rem;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #8892b0;
+            margin-bottom: 50px;
+            font-size: 1.1rem;
+        }
+
+        /* Actors Row */
+        .actors {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .actor {
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid;
+        }
+
+        .actor.client {
+            border-color: #64ffda;
+        }
+
+        .actor.mcp-server {
+            border-color: #ff6b6b;
+        }
+
+        .actor.auth-server {
+            border-color: #ffd93d;
+        }
+
+        .actor-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .actor-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .actor-desc {
+            font-size: 0.85rem;
+            color: #8892b0;
+        }
+
+        /* Flow Steps */
+        .flow {
+            position: relative;
+        }
+
+        .step {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .step-number {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+            position: relative;
+            z-index: 2;
+        }
+
+        .step:nth-child(1) .step-number { background: linear-gradient(135deg, #ff6b6b, #ee5a5a); }
+        .step:nth-child(2) .step-number { background: linear-gradient(135deg, #ffd93d, #f5c800); }
+        .step:nth-child(3) .step-number { background: linear-gradient(135deg, #6bcb77, #4caf50); }
+        .step:nth-child(4) .step-number { background: linear-gradient(135deg, #4d96ff, #3a7bd5); }
+        .step:nth-child(5) .step-number { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+        .step:nth-child(6) .step-number { background: linear-gradient(135deg, #64ffda, #00bfa5); }
+
+        .step-content {
+            background: rgba(255,255,255,0.03);
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .step-content:hover {
+            background: rgba(255,255,255,0.06);
+            border-color: rgba(255,255,255,0.2);
+            transform: translateX(5px);
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .step-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .step-actors {
+            display: flex;
+            gap: 8px;
+        }
+
+        .actor-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-client { background: rgba(100, 255, 218, 0.2); color: #64ffda; }
+        .badge-mcp { background: rgba(255, 107, 107, 0.2); color: #ff6b6b; }
+        .badge-auth { background: rgba(255, 217, 61, 0.2); color: #ffd93d; }
+
+        .step-desc {
+            color: #a0a0a0;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        /* Flow Diagram */
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .flow-box {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .box-client { background: #64ffda; color: #1a1a2e; }
+        .box-mcp { background: #ff6b6b; color: #fff; }
+        .box-auth { background: #ffd93d; color: #1a1a2e; }
+
+        .flow-arrow {
+            color: #8892b0;
+            font-size: 1.2rem;
+        }
+
+        .flow-message {
+            background: rgba(255,255,255,0.1);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #ccc;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+
+        /* Code Block */
+        .code-block {
+            background: #0d1117;
+            border-radius: 10px;
+            padding: 15px;
+            overflow-x: auto;
+            border: 1px solid #30363d;
+        }
+
+        .code-block pre {
+            margin: 0;
+            font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            color: #c9d1d9;
+        }
+
+        .code-block .keyword { color: #ff7b72; }
+        .code-block .string { color: #a5d6ff; }
+        .code-block .key { color: #7ee787; }
+        .code-block .comment { color: #8b949e; }
+
+        /* Vertical Line */
+        .step::before {
+            content: '';
+            position: absolute;
+            left: 29px;
+            top: 60px;
+            bottom: -30px;
+            width: 2px;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.3), rgba(255,255,255,0.1));
+            z-index: 1;
+        }
+
+        .step:last-child::before {
+            display: none;
+        }
+
+        /* Summary Box */
+        .summary {
+            margin-top: 50px;
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(100, 255, 218, 0.1), rgba(100, 255, 218, 0.02));
+            border-radius: 16px;
+            border: 1px solid rgba(100, 255, 218, 0.3);
+        }
+
+        .summary h2 {
+            color: #64ffda;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .summary-flow {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .summary-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .summary-num {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(100, 255, 218, 0.2);
+            color: #64ffda;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .summary-label {
+            font-size: 0.75rem;
+            color: #8892b0;
+            text-align: center;
+            max-width: 80px;
+        }
+
+        .summary-arrow {
+            color: #64ffda;
+            font-size: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .actors {
+                grid-template-columns: 1fr;
+            }
+
+            .step {
+                grid-template-columns: 1fr;
+            }
+
+            .step-number {
+                margin-bottom: 15px;
+            }
+
+            .step::before {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 MCP OAuth 2.1 Authorization Flow</h1>
+        <p class="subtitle">How MCP Clients authenticate with OAuth-protected MCP Servers</p>
+
+        <!-- Actors -->
+        <div class="actors">
+            <div class="actor client">
+                <div class="actor-icon">💻</div>
+                <div class="actor-name">MCP Client</div>
+                <div class="actor-desc">VS Code, Claude Desktop, or any MCP-compatible client</div>
+            </div>
+            <div class="actor mcp-server">
+                <div class="actor-icon">🖥️</div>
+                <div class="actor-name">MCP Server</div>
+                <div class="actor-desc">OAuth-protected resource server (Calendar, Tools, etc.)</div>
+            </div>
+            <div class="actor auth-server">
+                <div class="actor-icon">🔑</div>
+                <div class="actor-name">Authorization Server</div>
+                <div class="actor-desc">Keycloak, Auth0, Okta, or any OAuth 2.1 provider</div>
+            </div>
+        </div>
+
+        <!-- Flow Steps -->
+        <div class="flow">
+
+            <!-- Step 1: Initial Handshake -->
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <div class="step-header">
+                        <div class="step-title">Initial Handshake</div>
+                        <div class="step-actors">
+                            <span class="actor-badge badge-client">Client</span>
+                            <span class="actor-badge badge-mcp">MCP Server</span>
+                        </div>
+                    </div>
+                    <p class="step-desc">
+                        The client attempts to connect without credentials. The server responds with
+                        <strong>401 Unauthorized</strong> and includes a pointer to the Protected Resource Metadata (PRM) document.
+                    </p>
+                    <div class="flow-diagram">
+                        <div class="flow-box box-client">MCP Client</div>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-message">GET /sse (no token)</span>
+                        <span class="flow-arrow">→</span>
+                        <div class="flow-box box-mcp">MCP Server</div>
+                    </div>
+                    <div class="flow-diagram">
+                        <div class="flow-box box-mcp">MCP Server</div>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-message">401 + WWW-Authenticate header</span>
+                        <span class="flow-arrow">→</span>
+                        <div class="flow-box box-client">MCP Client</div>
+                    </div>
+                    <div class="code-block">
+<pre><span class="keyword">HTTP/1.1</span> <span class="string">401 Unauthorized</span>
+<span class="key">WWW-Authenticate:</span> Bearer realm="mcp",
+  resource_metadata="<span class="string">https://server/.well-known/oauth-protected-resource</span>"</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: PRM Discovery -->
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <div class="step-header">
+                        <div class="step-title">Protected Resource Metadata (PRM) Discovery</div>
+                        <div class="step-actors">
+                            <span class="actor-badge badge-client">Client</span>
+                            <span class="actor-badge badge-mcp">MCP Server</span>
+                        </div>
+                    </div>
+                    <p class="step-desc">
+                        The client fetches the PRM document (RFC 9728) to learn about OAuth requirements:
+                        which authorization server to use, required scopes, and how to send tokens.
+                    </p>
+                    <div class="flow-diagram">
+                        <div class="flow-box box-client">MCP Client</div>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-message">GET /.well-known/oauth-protected-resource</span>
+                        <span class="flow-arrow">→</span>
+                        <div class="flow-box box-mcp">MCP Server</div>
+                    </div>
+                    <div class="code-block">
+<pre><span class="comment">// PRM Document (RFC 9728)</span>
+{
+  <span class="key">"resource"</span>: <span class="string">"http://localhost:3000"</span>,
+  <span class="key">"authorization_servers"</span>: [<span class="string">"http://localhost:8080/realms/master"</span>],
+  <span class="key">"scopes_supported"</span>: [<span class="string">"mcp:tools"</span>],
+  <span class="key">"bearer_methods_supported"</span>: [<span class="string">"header"</span>]
+}</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Auth Server Discovery -->
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <div class="step-header">
+                        <div class="step-title">Authorization Server Discovery</div>
+                        <div class="step-actors">
+                            <span class="actor-badge badge-client">Client</span>
+                            <span class="actor-badge badge-auth">Auth Server</span>
+                        </div>
+                    </div>
+                    <p class="step-desc">
+                        The client fetches the OIDC Discovery document from the authorization server
+                        to learn its endpoints: authorization, token, introspection, and registration.
+                    </p>
+                    <div class="flow-diagram">
+                        <div class="flow-box box-client">MCP Client</div>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-message">GET /.well-known/openid-configuration</span>
+                        <span class="flow-arrow">→</span>
+                        <div class="flow-box box-auth">Keycloak</div>
+                    </div>
+                    <div class="code-block">
+<pre><span class="comment">// OIDC Discovery Document</span>
+{
+  <span class="key">"issuer"</span>: <span class="string">"http://localhost:8080/realms/master"</span>,
+  <span class="key">"authorization_endpoint"</span>: <span class="string">".../.../auth"</span>,
+  <span class="key">"token_endpoint"</span>: <span class="string">".../.../token"</span>,
+  <span class="key">"introspection_endpoint"</span>: <span class="string">".../.../introspect"</span>,
+  <span class="key">"registration_endpoint"</span>: <span class="string">".../.../register"</span>
+}</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Client Registration -->
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <div class="step-header">
+                        <div class="step-title">Client Registration</div>
+                        <div class="step-actors">
+                            <span class="actor-badge badge-client">Client</span>
+                            <span class="actor-badge badge-auth">Auth Server</span>
+                        </div>
+                    </div>
+                    <p class="step-desc">
+                        The client must be registered with the authorization server. This can be done via:
+                        <strong>pre-registration</strong> (credentials configured ahead of time) or
+                        <strong>Dynamic Client Registration (DCR)</strong> at runtime.
+                    </p>
+                    <div class="flow-diagram">
+                        <div class="flow-box box-client">MCP Client</div>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-message">POST /register (DCR) or use pre-registered credentials</span>
+                        <span class="flow-arrow">→</span>
+                        <div class="flow-box box-auth">Keycloak</div>
+                    </div>
+                    <div class="code-block">
+<pre><span class="comment">// Pre-registered or DCR response</span>
+{
+  <span class="key">"client_id"</span>: <span class="string">"mcp-client"</span>,
+  <span class="key">"client_secret"</span>: <span class="string">"zrqR06T0NBTct1ZP..."</span>,
+  <span class="key">"redirect_uris"</span>: [<span class="string">"http://localhost:3000/callback"</span>],
+  <span class="key">"grant_types"</span>: [<span class="string">"authorization_code"</span>, <span class="string">"refresh_token"</span>]
+}</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5: User Authorization -->
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <div class="step-header">
+                        <div class="step-title">User Authorization</div>
+                        <div class="step-actors">
+                            <span class="actor-badge badge-client">Client</span>
+                            <span class="actor-badge badge-auth">Auth Server</span>
+                        </div>
+                    </div>
+                    <p class="step-desc">
+                        The client opens a browser to the authorization endpoint. The user logs in,
+                        grants permissions, and the auth server returns an <strong>authorization code</strong>.
+                        The client exchanges this code (with PKCE proof) for an <strong>access token</strong>.
+                    </p>
+                    <div class="flow-diagram">
+                        <div class="flow-box box-client">MCP Client</div>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-message">🌐 Browser → /authorize</span>
+                        <span class="flow-arrow">→</span>
+                        <div class="flow-box box-auth">Keycloak</div>
+                    </div>
+                    <div class="flow-diagram">
+                        <div class="flow-box box-auth">Keycloak</div>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-message">👤 User logs in → auth_code</span>
+                        <span class="flow-arrow">→</span>
+                        <div class="flow-box box-client">MCP Client</div>
+                    </div>
+                    <div class="flow-diagram">
+                        <div class="flow-box box-client">MCP Client</div>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-message">POST /token (code + PKCE)</span>
+                        <span class="flow-arrow">→</span>
+                        <div class="flow-box box-auth">Keycloak</div>
+                    </div>
+                    <div class="code-block">
+<pre><span class="comment">// Token Response</span>
+{
+  <span class="key">"access_token"</span>: <span class="string">"eyJhbGciOiJSUzI1NiIs..."</span>,
+  <span class="key">"refresh_token"</span>: <span class="string">"def502..."</span>,
+  <span class="key">"token_type"</span>: <span class="string">"Bearer"</span>,
+  <span class="key">"expires_in"</span>: 3600,
+  <span class="key">"scope"</span>: <span class="string">"mcp:tools"</span>
+}</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 6: Authenticated Requests -->
+            <div class="step">
+                <div class="step-number">6</div>
+                <div class="step-content">
+                    <div class="step-header">
+                        <div class="step-title">Making Authenticated Requests</div>
+                        <div class="step-actors">
+                            <span class="actor-badge badge-client">Client</span>
+                            <span class="actor-badge badge-mcp">MCP Server</span>
+                            <span class="actor-badge badge-auth">Auth Server</span>
+                        </div>
+                    </div>
+                    <p class="step-desc">
+                        The client includes the access token in the <strong>Authorization</strong> header.
+                        The MCP server validates the token via <strong>introspection</strong> (RFC 7662)
+                        with the auth server, then processes the request if valid.
+                    </p>
+                    <div class="flow-diagram">
+                        <div class="flow-box box-client">MCP Client</div>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-message">GET /sse + Authorization: Bearer token</span>
+                        <span class="flow-arrow">→</span>
+                        <div class="flow-box box-mcp">MCP Server</div>
+                    </div>
+                    <div class="flow-diagram">
+                        <div class="flow-box box-mcp">MCP Server</div>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-message">POST /introspect (validate token)</span>
+                        <span class="flow-arrow">→</span>
+                        <div class="flow-box box-auth">Keycloak</div>
+                    </div>
+                    <div class="flow-diagram">
+                        <div class="flow-box box-mcp">MCP Server</div>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-message">✅ SSE Stream (tools, resources)</span>
+                        <span class="flow-arrow">→</span>
+                        <div class="flow-box box-client">MCP Client</div>
+                    </div>
+                    <div class="code-block">
+<pre><span class="comment">// Authenticated Request</span>
+<span class="keyword">GET</span> /sse <span class="keyword">HTTP/1.1</span>
+<span class="key">Host:</span> localhost:3000
+<span class="key">Authorization:</span> Bearer <span class="string">eyJhbGciOiJSUzI1NiIs...</span>
+<span class="key">Accept:</span> text/event-stream</pre>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Summary -->
+        <div class="summary">
+            <h2>✨ Flow Summary</h2>
+            <div class="summary-flow">
+                <div class="summary-step">
+                    <div class="summary-num">1</div>
+                    <div class="summary-label">401 + PRM URL</div>
+                </div>
+                <span class="summary-arrow">→</span>
+                <div class="summary-step">
+                    <div class="summary-num">2</div>
+                    <div class="summary-label">Fetch PRM</div>
+                </div>
+                <span class="summary-arrow">→</span>
+                <div class="summary-step">
+                    <div class="summary-num">3</div>
+                    <div class="summary-label">OIDC Discovery</div>
+                </div>
+                <span class="summary-arrow">→</span>
+                <div class="summary-step">
+                    <div class="summary-num">4</div>
+                    <div class="summary-label">Register Client</div>
+                </div>
+                <span class="summary-arrow">→</span>
+                <div class="summary-step">
+                    <div class="summary-num">5</div>
+                    <div class="summary-label">Get Token</div>
+                </div>
+                <span class="summary-arrow">→</span>
+                <div class="summary-step">
+                    <div class="summary-num">6</div>
+                    <div class="summary-label">Call MCP</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{{- if .Values.calendarApi.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "redwood-calendar.fullname" . }}-api
+  labels:
+    {{- include "redwood-calendar.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  type: {{ .Values.calendarApi.service.type }}
+  ports:
+  - port: {{ .Values.calendarApi.service.port }}
+    targetPort: {{ .Values.calendarApi.service.targetPort }}
+    name: http
+  selector:
+    {{- include "redwood-calendar.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+{{- end }}
