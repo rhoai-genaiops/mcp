@@ -1,0 +1,20 @@
+# Ignore log files
+*.log
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore environment files (secrets)
+.env
+
+# Ignore tests
+tests/
+
+# Ignore IDE files
+.vscode/
+.idea/
+
+# Ignore git
+.git/
