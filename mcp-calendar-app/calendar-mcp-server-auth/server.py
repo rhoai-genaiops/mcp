@@ -431,10 +431,10 @@ async def get_events_by_date(date: str) -> str:
         except:
             continue
 
-    summary = f"Events on {date}: {len(date_events)} found\n\n"
+    summary = f"📅 Events on {date}: {len(date_events)} found\n\n"
 
     event_list = "\n".join([
-        f"- {event['name']} ({event['category']})\n  {event['start_time'].split()[1]} - {event['end_time'].split()[1]}"
+        f"• {event['name']} ({event['category']})\n  🕐 {event['start_time'].split()[1]} - {event['end_time'].split()[1]}"
         for event in date_events
     ])
 
@@ -484,24 +484,24 @@ async def get_calendar_statistics(period: PeriodType = "month") -> str:
         categories[cat] = categories.get(cat, 0) + 1
 
     category_breakdown = "\n".join([
-        f"- {cat}: {count} events"
+        f"• {cat}: {count} events"
         for cat, count in sorted(categories.items())
     ])
 
     completion_rate = (completed_events / total_events * 100) if total_events > 0 else 0
 
-    return f"""Redwood Digital University Calendar Statistics ({period})
+    return f"""📊 Redwood Digital University Calendar Statistics ({period})
 
-**Overview:**
-- Total Events: {total_events}
-- Completed: {completed_events} ({completion_rate:.1f}%)
-- In Progress: {in_progress_events}
-- Pending: {pending_events}
+📈 **Overview:**
+• Total Events: {total_events}
+• Completed: {completed_events} ({completion_rate:.1f}%)
+• In Progress: {in_progress_events}
+• Pending: {pending_events}
 
-**By Category:**
+📋 **By Category:**
 {category_breakdown}
 
-**Academic Activity Level:** {'High' if total_events > 50 else 'Medium' if total_events > 20 else 'Low'}"""
+🎯 **Academic Activity Level:** {'High' if total_events > 50 else 'Medium' if total_events > 20 else 'Low'}"""
 
 if __name__ == "__main__":
     logger.info("Starting Redwood Digital University Calendar MCP Server")
