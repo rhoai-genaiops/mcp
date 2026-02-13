@@ -14,6 +14,8 @@ spec:
       app.kubernetes.io/component: api
   template:
     metadata:
+      annotations:
+        instrumentation.opentelemetry.io/inject-python: "canopy-instrumentation"
       labels:
         {{- include "redwood-calendar.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: api
@@ -42,6 +44,10 @@ spec:
           value: {{ .Values.university.name | quote }}
         - name: SYSTEM_BRANDING
           value: {{ .Values.university.systemBranding | quote }}
+        - name: OTEL_SERVICE_NAME
+          value: "calendar-api"
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: "service.namespace={{ .Release.Namespace }},service.version={{ .Values.calendarApi.image.tag }}"
         resources:
           {{- toYaml .Values.calendarApi.resources | nindent 12 }}
         livenessProbe:
@@ -50,12 +56,14 @@ spec:
             port: http
           initialDelaySeconds: 30
           periodSeconds: 10
+          timeoutSeconds: 10
         readinessProbe:
           httpGet:
             path: /
             port: http
           initialDelaySeconds: 5
           periodSeconds: 5
+          timeoutSeconds: 10
         volumeMounts:
         - name: calendar-data
           mountPath: /app/data

@@ -105,6 +105,19 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
+# OpenTelemetry configuration (always enabled)
+otel:
+  # Override the toolings namespace (auto-detected from release namespace if not set)
+  # e.g., for user1-mcp namespace, toolings would be user1-toolings
+  toolingsNamespace: ""
+  # Sampling ratio (1.0 = 100% sampling)
+  samplingRatio: "1.0"
+  # Metrics endpoint (RHOAI collector)
+  metricsEndpoint: "http://data-science-collector-collector-headless.redhat-ods-monitoring.svc.cluster.local:4318/v1/metrics"
+  python:
+    # Python auto-instrumentation image
+    image: "ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-python:0.59b0"
+
 # Security context
 securityContext:
   runAsNonRoot: true

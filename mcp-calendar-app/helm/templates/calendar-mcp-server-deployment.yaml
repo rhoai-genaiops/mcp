@@ -14,6 +14,8 @@ spec:
       app.kubernetes.io/component: mcp-server
   template:
     metadata:
+      annotations:
+        instrumentation.opentelemetry.io/inject-python: "canopy-instrumentation"
       labels:
         {{- include "redwood-calendar.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: mcp-server
@@ -34,6 +36,11 @@ spec:
         envFrom:
         - configMapRef:
             name: {{ include "redwood-calendar.fullname" . }}-mcp-server-config
+        env:
+        - name: OTEL_SERVICE_NAME
+          value: "calendar-mcp-server"
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: "service.namespace={{ .Release.Namespace }},service.version={{ .Values.calendarMcpServer.image.tag }}"
         resources:
           {{- toYaml .Values.calendarMcpServer.resources | nindent 12 }}
         livenessProbe:
@@ -44,6 +51,7 @@ spec:
             - "import sys; sys.exit(0)"
           initialDelaySeconds: 30
           periodSeconds: 30
+          timeoutSeconds: 30
         readinessProbe:
           exec:
             command:
@@ -52,6 +60,7 @@ spec:
             - "import sys; sys.exit(0)"
           initialDelaySeconds: 5
           periodSeconds: 10
+          timeoutSeconds: 30
         securityContext:
           runAsNonRoot: true
           allowPrivilegeEscalation: false
