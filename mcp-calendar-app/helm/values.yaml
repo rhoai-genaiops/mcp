@@ -35,10 +35,6 @@ calendarApi:
     enabled: true
     size: 1Gi
     storageClass: ""
-  
-  database:
-    initJob:
-      enabled: true
 
 # Calendar Frontend configuration
 calendarFrontend:

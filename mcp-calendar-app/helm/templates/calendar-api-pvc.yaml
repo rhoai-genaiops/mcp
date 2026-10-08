@@ -3,6 +3,8 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: {{ include "redwood-calendar.fullname" . }}-api-pvc
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
   labels:
     {{- include "redwood-calendar.labels" . | nindent 4 }}
     app.kubernetes.io/component: api

@@ -3,6 +3,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "redwood-calendar.fullname" . }}-api
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
   labels:
     {{- include "redwood-calendar.labels" . | nindent 4 }}
     app.kubernetes.io/component: api
@@ -24,6 +26,34 @@ spec:
       {{- end }}
       securityContext:
         {{- toYaml .Values.securityContext | nindent 8 }}
+      initContainers:
+      - name: db-init
+        image: "{{ .Values.global.imageRegistry }}{{ .Values.calendarApi.image.repository }}:{{ .Values.calendarApi.image.tag }}"
+        imagePullPolicy: {{ .Values.calendarApi.image.pullPolicy }}
+        command:
+        - python
+        - test_data.py
+        env:
+        - name: DATABASE_PATH
+          value: "/app/data/CalendarDB.db"
+        - name: SQLITE_TMPDIR
+          value: "/tmp"
+        - name: TMPDIR
+          value: "/tmp"
+        - name: UNIVERSITY_NAME
+          value: {{ .Values.university.name | quote }}
+        volumeMounts:
+        - name: calendar-data
+          mountPath: /app/data
+        - name: tmp
+          mountPath: /tmp
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
       containers:
       - name: calendar-api
         image: "{{ .Values.global.imageRegistry }}{{ .Values.calendarApi.image.repository }}:{{ .Values.calendarApi.image.tag }}"
